@@ -51,7 +51,7 @@ impl<B: Buf> Buf for BufList<B> {
         while cnt > 0 {
             let entry = self.bufs.front_mut().unwrap();
             let remaining = entry.remaining();
-            if remaining < cnt {
+            if remaining > cnt {
                 entry.advance(cnt);
                 self.len -= cnt;
                 cnt -= cnt;
