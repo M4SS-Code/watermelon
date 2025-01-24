@@ -357,6 +357,12 @@ impl Handler {
 
     #[cold]
     fn failed_unsubscribe(&mut self) {
+        #[derive(Debug, Copy, Clone)]
+        enum CloseReason {
+            FailedSubscribe,
+            Dropped,
+        }
+
         self.quick_info.store_is_failed_unsubscribe(false);
 
         if let Some(multiplexed_subscriptions) = &mut self.multiplexed_subscriptions {
@@ -366,19 +372,27 @@ impl Handler {
         let closed_subscription_ids = self
             .subscriptions
             .iter()
-            .filter(|(_id, subscription)| {
-                subscription.failed_subscribe || subscription.messages.is_closed()
+            .filter_map(|(&id, subscription)| {
+                if subscription.failed_subscribe {
+                    Some((id, CloseReason::FailedSubscribe))
+                } else if subscription.messages.is_closed() {
+                    Some((id, CloseReason::Dropped))
+                } else {
+                    None
+                }
             })
-            .map(|(&id, _subscription)| id)
             .collect::<Vec<_>>();
 
-        for closed_subscription_id in closed_subscription_ids {
-            self.in_flight_commands
-                .push_back(InFlightCommand::Unimportant);
-            self.conn.enqueue_write_op(&ClientOp::Unsubscribe {
-                id: closed_subscription_id,
-                max_messages: None,
-            });
+        for (closed_subscription_id, reason) in closed_subscription_ids {
+            if matches!(reason, CloseReason::Dropped) {
+                self.in_flight_commands
+                    .push_back(InFlightCommand::Unimportant);
+                self.conn.enqueue_write_op(&ClientOp::Unsubscribe {
+                    id: closed_subscription_id,
+                    max_messages: None,
+                });
+            }
+
             self.subscriptions.remove(&closed_subscription_id);
         }
     }
