@@ -18,7 +18,7 @@ Watermelon is divided into multiple crates, all hosted in the same monorepo.
 | `watermelon-mini`  | [![crates.io](https://img.shields.io/crates/v/watermelon-mini.svg)](https://crates.io/crates/watermelon-mini)   | [![Documentation](https://docs.rs/watermelon-mini/badge.svg)](https://docs.rs/watermelon-mini)   | Minimal NATS Core client implementation                                                  |
 | `watermelon-net`   | [![crates.io](https://img.shields.io/crates/v/watermelon-net.svg)](https://crates.io/crates/watermelon-net)     | [![Documentation](https://docs.rs/watermelon-net/badge.svg)](https://docs.rs/watermelon-net)     | Low-level NATS Core network implementation                                               |
 | `watermelon-proto` | [![crates.io](https://img.shields.io/crates/v/watermelon-proto.svg)](https://crates.io/crates/watermelon-proto) | [![Documentation](https://docs.rs/watermelon-proto/badge.svg)](https://docs.rs/watermelon-proto) | `#[no_std]` NATS Core Sans-IO protocol implementation                                    |
-| `watermelon-proto` | [![crates.io](https://img.shields.io/crates/v/watermelon-proto.svg)](https://crates.io/crates/watermelon-nkeys) | [![Documentation](https://docs.rs/watermelon-nkeys/badge.svg)](https://docs.rs/watermelon-nkeys) | Minimal NKeys implementation for NATS client authentication                              |
+| `watermelon-nkeys` | [![crates.io](https://img.shields.io/crates/v/watermelon-nkeys.svg)](https://crates.io/crates/watermelon-nkeys) | [![Documentation](https://docs.rs/watermelon-nkeys/badge.svg)](https://docs.rs/watermelon-nkeys) | Minimal NKeys implementation for NATS client authentication                              |
 
 # Advantages over `async-nats`
 
