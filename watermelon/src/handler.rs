@@ -174,6 +174,7 @@ impl Handler {
             });
 
             if let Some(remaining) = subscription.remaining {
+                in_flight_commands.push_back(InFlightCommand::Unimportant);
                 conn.enqueue_write_op(&ClientOp::Unsubscribe {
                     id,
                     max_messages: Some(remaining),
