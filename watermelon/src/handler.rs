@@ -367,7 +367,7 @@ impl Handler {
             .subscriptions
             .iter()
             .filter(|(_id, subscription)| {
-                subscription.messages.is_closed() || subscription.failed_subscribe
+                subscription.failed_subscribe || subscription.messages.is_closed()
             })
             .map(|(&id, _subscription)| id)
             .collect::<Vec<_>>();
