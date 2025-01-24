@@ -62,7 +62,7 @@ mod tests {
     #[test]
     fn decode_ping() {
         let mut decoder = StreamDecoder::new();
-        decoder.read_buf().put(Bytes::from_static(b"PING\r\n"));
+        decoder.read_buf().put_slice(b"PING\r\n");
         assert_ok_eq!(decoder.decode(), Some(ServerOp::Ping));
         assert_ok_eq!(decoder.decode(), None);
     }
@@ -70,7 +70,7 @@ mod tests {
     #[test]
     fn decode_pong() {
         let mut decoder = StreamDecoder::new();
-        decoder.read_buf().put(Bytes::from_static(b"PONG\r\n"));
+        decoder.read_buf().put_slice(b"PONG\r\n");
         assert_ok_eq!(decoder.decode(), Some(ServerOp::Pong));
         assert_ok_eq!(decoder.decode(), None);
     }
@@ -78,7 +78,7 @@ mod tests {
     #[test]
     fn decode_ok() {
         let mut decoder = StreamDecoder::new();
-        decoder.read_buf().put(Bytes::from_static(b"+OK\r\n"));
+        decoder.read_buf().put_slice(b"+OK\r\n");
         assert_ok_eq!(decoder.decode(), Some(ServerOp::Success));
         assert_ok_eq!(decoder.decode(), None);
     }
@@ -88,7 +88,7 @@ mod tests {
         let mut decoder = StreamDecoder::new();
         decoder
             .read_buf()
-            .put(Bytes::from_static(b"-ERR 'Authorization Violation'\r\n"));
+            .put_slice(b"-ERR 'Authorization Violation'\r\n");
         assert_ok_eq!(
             decoder.decode(),
             Some(ServerOp::Error {
@@ -99,12 +99,11 @@ mod tests {
     }
 
     #[test]
-
     fn decode_msg() {
         let mut decoder = StreamDecoder::new();
-        decoder.read_buf().put(Bytes::from_static(
-            b"MSG hello.world 1 12\r\nHello World!\r\n",
-        ));
+        decoder
+            .read_buf()
+            .put_slice(b"MSG hello.world 1 12\r\nHello World!\r\n");
         assert_ok_eq!(
             decoder.decode(),
             Some(ServerOp::Message {
