@@ -103,9 +103,6 @@ impl<B: Buf> Buf for BufList<B> {
 
         let mut bufs = BytesMut::with_capacity(len);
         bufs.put(self.take(len));
-        let bufs = bufs.freeze();
-
-        self.len -= len;
-        bufs
+        bufs.freeze()
     }
 }
