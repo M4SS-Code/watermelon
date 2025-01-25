@@ -84,18 +84,24 @@ where
     }
 
     pub fn poll_write_next(&mut self, cx: &mut Context<'_>) -> Poll<io::Result<usize>> {
-        if !self.encoder.has_remaining() {
+        let remaining = self.encoder.remaining();
+        if remaining == 0 {
             return Poll::Ready(Ok(0));
         }
 
-        let write_outcome = if self.socket.is_write_vectored() {
+        let chunk = self.encoder.chunk();
+        let write_outcome = if chunk.len() < remaining && self.socket.is_write_vectored() {
             let mut bufs = [io::IoSlice::new(&[]); 64];
             let n = self.encoder.chunks_vectored(&mut bufs);
-            debug_assert!(n > 0);
+            debug_assert!(n >= 2, "perf: chunks_vectored yielded less than 2 chunks despite the apparently fragmented internal encoder representation");
 
             Pin::new(&mut self.socket).poll_write_vectored(cx, &bufs[..n])
         } else {
-            Pin::new(&mut self.socket).poll_write(cx, self.encoder.chunk())
+            debug_assert!(
+                !chunk.is_empty(),
+                "perf: chunk shouldn't be empty given that `remaining > 0`"
+            );
+            Pin::new(&mut self.socket).poll_write(cx, chunk)
         };
 
         match write_outcome {
