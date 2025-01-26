@@ -60,7 +60,7 @@ impl<B: Buf> Buf for BufList<B> {
                 self.len -= cnt;
                 cnt -= cnt;
             } else {
-                let _ = self.bufs.remove(0);
+                let _ = self.bufs.pop_front();
                 self.len -= remaining;
                 cnt -= remaining;
             }
@@ -99,7 +99,7 @@ impl<B: Buf> Buf for BufList<B> {
                 }
                 Ordering::Equal => {
                     self.len -= len;
-                    return self.bufs.remove(0).unwrap().copy_to_bytes(len);
+                    return self.bufs.pop_front().unwrap().copy_to_bytes(len);
                 }
                 Ordering::Less => {}
             }
