@@ -5,8 +5,9 @@ use std::{
 };
 
 use bytes::Bytes;
+use futures_core::Stream as _;
 use futures_sink::Sink;
-use futures_util::{task::noop_waker_ref, Stream};
+use futures_util::task::noop_waker_ref;
 use http::Uri;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_websockets::{ClientBuilder, Message, WebSocketStream};
@@ -83,6 +84,7 @@ where
     }
 
     pub fn may_enqueue_more_ops(&mut self) -> bool {
+        // TODO: switch to `std::task::Waker::noop` with MSRV >= 1.85
         let mut cx = Context::from_waker(noop_waker_ref());
         Pin::new(&mut self.socket).poll_ready(&mut cx).is_ready()
     }

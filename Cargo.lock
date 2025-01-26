@@ -1453,6 +1453,7 @@ version = "0.1.0"
 dependencies = [
  "bytes",
  "claims",
+ "futures-core",
  "futures-sink",
  "futures-util",
  "http",

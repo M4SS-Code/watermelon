@@ -1,5 +1,5 @@
 use std::{
-    future::Future,
+    future::{self, Future},
     io,
     net::SocketAddr,
     pin::{pin, Pin},
@@ -7,10 +7,7 @@ use std::{
     time::Duration,
 };
 
-use futures_util::{
-    stream::{self, FusedStream},
-    Stream, StreamExt,
-};
+use futures_core::{stream::FusedStream, Stream};
 use pin_project_lite::pin_project;
 use tokio::{
     net::{self, TcpStream},
@@ -18,6 +15,8 @@ use tokio::{
     time::{self, Sleep},
 };
 use watermelon_proto::{Host, ServerAddr};
+
+use crate::future::IterToStream;
 
 const CONN_ATTEMPT_DELAY: Duration = Duration::from_millis(250);
 
@@ -38,10 +37,10 @@ pub async fn connect(addr: &ServerAddr) -> io::Result<TcpStream> {
             let host = <_ as AsRef<str>>::as_ref(host);
             let addrs = net::lookup_host(format!("{}:{}", host, addr.port())).await?;
 
-            let mut happy_eyeballs = pin!(HappyEyeballs::new(stream::iter(addrs)));
+            let mut happy_eyeballs = pin!(HappyEyeballs::new(IterToStream { iter: addrs }));
             let mut last_err = None;
             loop {
-                match happy_eyeballs.next().await {
+                match future::poll_fn(|cx| happy_eyeballs.as_mut().poll_next(cx)).await {
                     Some(Ok(conn)) => return Ok(conn),
                     Some(Err(err)) => last_err = Some(err),
                     None => {
