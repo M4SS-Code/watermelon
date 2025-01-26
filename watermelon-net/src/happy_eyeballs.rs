@@ -8,12 +8,13 @@ use std::{
 };
 
 use futures_util::{
-    stream::{self, FusedStream, FuturesUnordered},
+    stream::{self, FusedStream},
     Stream, StreamExt,
 };
 use pin_project_lite::pin_project;
 use tokio::{
     net::{self, TcpStream},
+    task::JoinSet,
     time::{self, Sleep},
 };
 use watermelon_proto::{Host, ServerAddr};
@@ -62,8 +63,8 @@ pin_project! {
     struct HappyEyeballs<D> {
         dns: Option<D>,
         dns_received: Vec<SocketAddr>,
-        connecting: FuturesUnordered<
-            Pin<Box<dyn Future<Output = io::Result<TcpStream>> + Send + Sync + 'static>>,
+        connecting: JoinSet<
+            io::Result<TcpStream>,
         >,
         last_attempted: Option<LastAttempted>,
         #[pin]
@@ -82,7 +83,7 @@ impl<D> HappyEyeballs<D> {
         Self {
             dns: Some(dns),
             dns_received: Vec::new(),
-            connecting: FuturesUnordered::new(),
+            connecting: JoinSet::new(),
             last_attempted: None,
             next_attempt_delay: None,
         }
@@ -136,9 +137,11 @@ where
         }
 
         loop {
-            match Pin::new(&mut this.connecting).poll_next(cx) {
+            match this.connecting.poll_join_next(cx) {
                 Poll::Pending => dead_end = false,
-                Poll::Ready(Some(maybe_conn)) => return Poll::Ready(Some(maybe_conn)),
+                Poll::Ready(Some(maybe_conn)) => {
+                    return Poll::Ready(Some(maybe_conn.expect("connect panicked")))
+                }
                 Poll::Ready(None) => {}
             }
 
@@ -162,7 +165,7 @@ where
             match this.next_dns_record() {
                 Some(record) => {
                     let conn_fut = TcpStream::connect(record);
-                    this.connecting.push(Box::pin(conn_fut));
+                    this.connecting.spawn(conn_fut);
                     this.next_attempt_delay
                         .set(Some(time::sleep(CONN_ATTEMPT_DELAY)));
                 }

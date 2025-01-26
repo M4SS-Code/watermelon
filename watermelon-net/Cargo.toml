@@ -13,7 +13,7 @@ rust-version.workspace = true
 features = ["websocket", "non-standard-zstd"]
 
 [dependencies]
-tokio = { version = "1", features = ["net", "time", "io-util"] }
+tokio = { version = "1.21", features = ["rt", "net", "time", "io-util"] }
 futures-util = { version = "0.3.14", default-features = false, features = ["alloc"] }
 bytes = "1"
 
@@ -27,7 +27,7 @@ thiserror = "2"
 pin-project-lite = "0.2.15"
 
 [dev-dependencies]
-tokio = { version = "1", features = ["macros", "rt"] }
+tokio = { version = "1", features = ["macros"] }
 futures-util = { version = "0.3.14", default-features = false }
 claims = "0.8"
 
