@@ -146,9 +146,7 @@ mod tests {
     #[cfg(feature = "std")]
     use std::io::IoSlice;
 
-    #[cfg(feature = "std")]
-    use bytes::Buf;
-    use bytes::Bytes;
+    use bytes::{Buf as _, Bytes};
 
     use super::StreamEncoder;
     #[cfg(feature = "std")]
