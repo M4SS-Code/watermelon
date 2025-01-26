@@ -47,13 +47,13 @@ impl Default for StreamDecoder {
 #[cfg(test)]
 mod tests {
     use bytes::{BufMut as _, Bytes};
-    use claims::assert_ok_eq;
+    use claims::{assert_matches, assert_ok_eq};
 
     use crate::{
         error::ServerError,
         headers::HeaderMap,
         message::{MessageBase, ServerMessage},
-        proto::server::ServerOp,
+        proto::{error::DecoderError, server::ServerOp},
         Subject,
     };
 
@@ -120,5 +120,15 @@ mod tests {
             })
         );
         assert_ok_eq!(decoder.decode(), None);
+    }
+
+    #[test]
+    fn head_too_long() {
+        let mut decoder = StreamDecoder::new();
+        decoder.read_buf().put_bytes(0, 20000);
+        assert_matches!(
+            decoder.decode(),
+            Err(DecoderError::HeadTooLong { len: 20000 })
+        );
     }
 }

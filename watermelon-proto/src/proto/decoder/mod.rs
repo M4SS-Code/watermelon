@@ -83,8 +83,14 @@ pub(super) fn decode(
                 }
 
                 let Some(control_line_len) = memchr::memmem::find(read_buf, b"\r\n") else {
-                    *last_bytes_read = read_buf.len();
-                    return Ok(None);
+                    return if read_buf.len() < MAX_HEAD_LEN {
+                        *last_bytes_read = read_buf.len();
+                        Ok(None)
+                    } else {
+                        Err(DecoderError::HeadTooLong {
+                            len: read_buf.len(),
+                        })
+                    };
                 };
 
                 let mut control_line = read_buf.split_to(control_line_len + "\r\n".len());
@@ -118,10 +124,6 @@ pub(super) fn decode(
                 } else if let Some(info) = control_line.strip_prefix(b"INFO ") {
                     let info = serde_json::from_slice(info).map_err(DecoderError::InvalidInfo)?;
                     Ok(Some(ServerOp::Info { info }))
-                } else if read_buf.len() > MAX_HEAD_LEN {
-                    Err(DecoderError::HeadTooLong {
-                        len: read_buf.len(),
-                    })
                 } else {
                     Err(DecoderError::InvalidCommand)
                 };
