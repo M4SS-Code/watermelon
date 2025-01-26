@@ -1,4 +1,3 @@
-use core::fmt::{self, Write as _};
 #[cfg(feature = "std")]
 use std::io;
 
@@ -25,25 +24,9 @@ pub(super) trait FrameEncoder {
         self.small_write(buf.as_ref());
     }
 
-    fn small_fmt_writer(&mut self) -> SmallFmtWriter<'_, Self> {
-        SmallFmtWriter(self)
-    }
-
     #[cfg(feature = "std")]
     fn small_io_writer(&mut self) -> SmallIoWriter<'_, Self> {
         SmallIoWriter(self)
-    }
-}
-
-pub(super) struct SmallFmtWriter<'a, E: ?Sized>(&'a mut E);
-
-impl<E> fmt::Write for SmallFmtWriter<'_, E>
-where
-    E: FrameEncoder,
-{
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        self.0.small_write(s.as_bytes());
-        Ok(())
     }
 }
 
@@ -71,12 +54,6 @@ where
 }
 
 pub(super) fn encode<E: FrameEncoder>(encoder: &mut E, item: &ClientOp) {
-    macro_rules! small_write {
-        ($dst:expr) => {
-            write!(encoder.small_fmt_writer(), $dst).expect("do small write to Connection");
-        };
-    }
-
     match item {
         ClientOp::Publish { message } => {
             let MessageBase {
@@ -85,22 +62,28 @@ pub(super) fn encode<E: FrameEncoder>(encoder: &mut E, item: &ClientOp) {
                 headers,
                 payload,
             } = &message;
-            let verb = if headers.is_empty() { "PUB" } else { "HPUB" };
-
-            small_write!("{verb} {subject} ");
+            let verb_and_space = if headers.is_empty() { "PUB " } else { "HPUB " };
+            encoder.small_write(verb_and_space.as_bytes());
+            encoder.small_write(subject.as_bytes());
+            encoder.small_write(b" ");
 
             if let Some(reply_subject) = reply_subject {
-                small_write!("{reply_subject} ");
+                encoder.small_write(reply_subject.as_bytes());
+                encoder.small_write(b" ");
             }
 
+            let mut buffer = itoa::Buffer::new();
             if headers.is_empty() {
-                let payload_len = payload.len();
-                small_write!("{payload_len}\r\n");
+                encoder.small_write(buffer.format(payload.len()).as_bytes());
+                encoder.small_write(b"\r\n");
             } else {
                 let headers_len = encode_headers(headers).fold(0, |len, s| len + s.len());
+                encoder.small_write(buffer.format(headers_len).as_bytes());
+                encoder.small_write(b" ");
 
                 let total_len = headers_len + payload.len();
-                small_write!("{headers_len} {total_len}\r\n");
+                encoder.small_write(buffer.format(total_len).as_bytes());
+                encoder.small_write(b"\r\n");
 
                 encode_headers(headers).for_each(|s| {
                     encoder.small_write(s.as_bytes());
@@ -114,22 +97,37 @@ pub(super) fn encode<E: FrameEncoder>(encoder: &mut E, item: &ClientOp) {
             id,
             subject,
             queue_group,
-        } => match queue_group {
-            Some(queue_group) => {
-                small_write!("SUB {subject} {queue_group} {id}\r\n");
+        } => {
+            // `SUB {subject} [{queue_group} ]id\r\n`
+            encoder.small_write(b"SUB ");
+            encoder.small_write(subject.as_bytes());
+            encoder.small_write(b" ");
+
+            if let Some(queue_group) = queue_group {
+                encoder.small_write(queue_group.as_bytes());
+                encoder.small_write(b" ");
             }
-            None => {
-                small_write!("SUB {subject} {id}\r\n");
+
+            let mut buffer = itoa::Buffer::new();
+            encoder.small_write(buffer.format(u64::from(*id)).as_bytes());
+            encoder.small_write(b"\r\n");
+        }
+        ClientOp::Unsubscribe { id, max_messages } => {
+            // `UNSUB {id}[ {max_messages}]\r\n`
+            encoder.small_write(b"UNSUB ");
+
+            let mut buffer = itoa::Buffer::new();
+            encoder.small_write(buffer.format(u64::from(*id)).as_bytes());
+
+            if let Some(max_messages) = *max_messages {
+                encoder.small_write(b" ");
+
+                let mut buffer = itoa::Buffer::new();
+                encoder.small_write(buffer.format(max_messages.get()).as_bytes());
             }
-        },
-        ClientOp::Unsubscribe { id, max_messages } => match max_messages {
-            Some(max_messages) => {
-                small_write!("UNSUB {id} {max_messages}\r\n");
-            }
-            None => {
-                small_write!("UNSUB {id}\r\n");
-            }
-        },
+
+            encoder.small_write(b"\r\n");
+        }
         ClientOp::Connect { connect } => {
             encoder.small_write(b"CONNECT ");
             #[cfg(feature = "std")]

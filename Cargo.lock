@@ -1482,6 +1482,7 @@ dependencies = [
  "bytes",
  "bytestring",
  "claims",
+ "itoa",
  "memchr",
  "percent-encoding",
  "serde",
