@@ -5,11 +5,14 @@ use std::{
     time::Duration,
 };
 
-use futures_core::{future::BoxFuture, FusedStream, Stream};
+use futures_core::{FusedStream, Stream};
 use pin_project_lite::pin_project;
 use watermelon_proto::ServerMessage;
 
-use crate::client::{Consumer, JetstreamClient, JetstreamError2};
+use crate::{
+    client::{Consumer, JetstreamClient, JetstreamError2},
+    future::BoxFuture,
+};
 
 use super::{consumer_batch::ConsumerBatchError, ConsumerBatch};
 

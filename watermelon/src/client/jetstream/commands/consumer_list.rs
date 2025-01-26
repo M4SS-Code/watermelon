@@ -6,12 +6,15 @@ use std::{
     task::{Context, Poll},
 };
 
-use futures_core::{future::BoxFuture, FusedStream, Stream};
+use futures_core::{FusedStream, Stream};
 use serde::Deserialize;
 use serde_json::json;
 use watermelon_proto::Subject;
 
-use crate::client::{self, jetstream::JetstreamError2, JetstreamClient};
+use crate::{
+    client::{self, jetstream::JetstreamError2, JetstreamClient},
+    future::BoxFuture,
+};
 
 /// A request to list consumers of a stream
 ///

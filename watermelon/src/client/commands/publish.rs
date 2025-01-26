@@ -4,7 +4,6 @@ use std::{
 };
 
 use bytes::Bytes;
-use futures_core::future::BoxFuture;
 use watermelon_proto::{
     headers::{HeaderMap, HeaderName, HeaderValue},
     MessageBase, Subject,
@@ -12,6 +11,7 @@ use watermelon_proto::{
 
 use crate::{
     client::{Client, ClientClosedError, TryCommandError},
+    future::BoxFuture,
     handler::HandlerCommand,
 };
 

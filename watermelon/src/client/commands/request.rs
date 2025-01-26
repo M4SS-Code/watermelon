@@ -8,7 +8,7 @@ use std::{
 };
 
 use bytes::Bytes;
-use futures_core::{future::BoxFuture, Stream};
+use futures_core::Stream;
 use pin_project_lite::pin_project;
 use tokio::time::{sleep, Sleep};
 use watermelon_proto::{
@@ -20,6 +20,7 @@ use watermelon_proto::{
 use crate::{
     client::{Client, ClientClosedError, TryCommandError},
     core::MultiplexedSubscription,
+    future::BoxFuture,
     subscription::Subscription,
 };
 

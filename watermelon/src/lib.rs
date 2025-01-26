@@ -2,6 +2,7 @@ pub use watermelon_proto as proto;
 
 mod atomic;
 mod client;
+mod future;
 mod handler;
 mod multiplexed_subscription;
 mod subscription;
