@@ -31,7 +31,7 @@ portable-atomic = { version = "1", optional = true }
 
 watermelon-mini = { version = "0.1", path = "../watermelon-mini", default-features = false }
 watermelon-net = { version = "0.1", path = "../watermelon-net" }
-watermelon-proto = { version = "0.1", path = "../watermelon-proto" }
+watermelon-proto = { version = "0.1.1", path = "../watermelon-proto" }
 watermelon-nkeys = { version = "0.1", path = "../watermelon-nkeys", default-features = false }
 
 thiserror = "2"

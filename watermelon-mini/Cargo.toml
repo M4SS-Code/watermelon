@@ -18,7 +18,7 @@ tokio-rustls = { version = "0.26", default-features = false }
 rustls-platform-verifier = "0.5"
 
 watermelon-net = { version = "0.1", path = "../watermelon-net" }
-watermelon-proto = { version = "0.1", path = "../watermelon-proto" }
+watermelon-proto = { version = "0.1.1", path = "../watermelon-proto" }
 watermelon-nkeys = { version = "0.1", path = "../watermelon-nkeys", default-features = false }
 
 thiserror = "2"
