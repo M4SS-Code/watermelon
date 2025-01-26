@@ -67,6 +67,16 @@ pub(super) fn decode(
     loop {
         match status {
             DecoderStatus::ControlLine { last_bytes_read } => {
+                if read_buf.starts_with(b"+OK\r\n") {
+                    // Fast path for handling `+OK`
+                    debug_assert_eq!(
+                        *last_bytes_read, 0,
+                        "we shouldn't have handled any bytes before"
+                    );
+                    read_buf.advance("+OK\r\n".len());
+                    return Ok(Some(ServerOp::Success));
+                }
+
                 if *last_bytes_read == read_buf.len() {
                     // No progress has been made
                     return Ok(None);
@@ -80,9 +90,7 @@ pub(super) fn decode(
                 let mut control_line = read_buf.split_to(control_line_len + "\r\n".len());
                 control_line.truncate(control_line.len() - 2);
 
-                return if control_line.starts_with(b"+OK") {
-                    Ok(Some(ServerOp::Success))
-                } else if control_line.starts_with(b"MSG ") {
+                return if control_line.starts_with(b"MSG ") {
                     *status = decode_msg(control_line)?;
                     continue;
                 } else if control_line.starts_with(b"HMSG ") {
@@ -92,6 +100,9 @@ pub(super) fn decode(
                     Ok(Some(ServerOp::Ping))
                 } else if control_line.starts_with(b"PONG") {
                     Ok(Some(ServerOp::Pong))
+                } else if control_line.starts_with(b"+OK") {
+                    // Slow path for handling `+OK`
+                    Ok(Some(ServerOp::Success))
                 } else if control_line.starts_with(b"-ERR ") {
                     control_line.advance("-ERR ".len());
                     if !control_line.starts_with(b"'") || !control_line.ends_with(b"'") {
