@@ -35,7 +35,7 @@ pub async fn connect(addr: &ServerAddr) -> io::Result<TcpStream> {
         Host::Ip(ip) => TcpStream::connect(SocketAddr::new(*ip, addr.port())).await,
         Host::Dns(host) => {
             let host = <_ as AsRef<str>>::as_ref(host);
-            let addrs = net::lookup_host(format!("{}:{}", host, addr.port())).await?;
+            let addrs = net::lookup_host((host, addr.port())).await?;
 
             let mut happy_eyeballs = pin!(HappyEyeballs::new(IterToStream { iter: addrs }));
             let mut last_err = None;
