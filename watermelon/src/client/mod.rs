@@ -7,7 +7,6 @@ use std::{
 
 use arc_swap::ArcSwap;
 use bytes::Bytes;
-use rand::RngCore;
 use tokio::{
     sync::{
         mpsc::{self, error::TrySendError, Permit},
@@ -497,7 +496,7 @@ impl TryCommandError {
 
 pub(crate) fn create_inbox_subject(prefix: &Subject) -> Subject {
     let mut suffix = [0u8; 16];
-    rand::thread_rng().fill_bytes(&mut suffix);
+    rand::fill(&mut suffix);
 
     let mut subject = String::with_capacity(prefix.len() + ".".len() + (suffix.len() * 2));
     write!(&mut subject, "{}.{:x}", prefix, u128::from_ne_bytes(suffix)).unwrap();
