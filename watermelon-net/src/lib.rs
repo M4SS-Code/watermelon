@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 #[cfg(feature = "websocket")]
 pub use self::connection::WebsocketConnection;
 pub use self::connection::{connect as proto_connect, Connection, StreamingConnection};

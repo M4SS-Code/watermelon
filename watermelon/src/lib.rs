@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 pub use watermelon_proto as proto;
 
 mod atomic;
