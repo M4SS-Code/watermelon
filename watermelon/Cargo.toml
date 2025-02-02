@@ -20,8 +20,11 @@ bytes = "1"
 serde = { version = "1.0.113", features = ["derive"] }
 serde_json = "1"
 pin-project-lite = "0.2"
-rand = { version = "0.9", default-features = false, features = ["thread_rng"] }
 chrono = { version = "0.4.20", default-features = false, features = ["std", "clock", "serde"] }
+
+# random number generation
+rand = { version = "0.9", default-features = false, features = ["thread_rng"], optional = true }
+getrandom = { version = "0.3.1", optional = true }
 
 # from-env
 envy = { version = "0.4", optional = true }
@@ -42,12 +45,14 @@ futures-util = { version = "0.3", default-features = false, features = ["alloc"]
 claims = "0.8"
 
 [features]
-default = ["aws-lc-rs", "from-env"]
+default = ["aws-lc-rs", "from-env", "rand"]
 websocket = ["watermelon-mini/websocket"]
 aws-lc-rs = ["watermelon-mini/aws-lc-rs", "watermelon-nkeys/aws-lc-rs"]
 ring = ["watermelon-mini/ring", "watermelon-nkeys/ring"]
 fips = ["watermelon-mini/fips", "watermelon-nkeys/fips"]
 from-env = ["dep:envy"]
+rand = ["dep:rand", "watermelon-mini/rand", "watermelon-net/rand"]
+getrandom = ["dep:getrandom", "watermelon-mini/getrandom", "watermelon-net/getrandom"]
 portable-atomic = ["dep:portable-atomic"]
 non-standard-zstd = ["watermelon-mini/non-standard-zstd", "watermelon-net/non-standard-zstd", "watermelon-proto/non-standard-zstd"]
 

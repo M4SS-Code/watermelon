@@ -496,7 +496,12 @@ impl TryCommandError {
 
 pub(crate) fn create_inbox_subject(prefix: &Subject) -> Subject {
     let mut suffix = [0u8; 16];
+    #[cfg(feature = "rand")]
     rand::fill(&mut suffix);
+    #[cfg(all(not(feature = "rand"), feature = "getrandom"))]
+    getrandom::fill(&mut suffix).expect("unable to generate random suffix");
+    #[cfg(all(not(feature = "rand"), not(feature = "getrandom")))]
+    compile_error!("Please enable the `rand` or the `getrandom` feature");
 
     let mut subject = String::with_capacity(prefix.len() + ".".len() + (suffix.len() * 2));
     write!(&mut subject, "{}.{:x}", prefix, u128::from_ne_bytes(suffix)).unwrap();

@@ -52,7 +52,7 @@ jobs:
           tool: cargo-hack@0.6.34
 
       - name: Run cargo-hack
-        run: cargo hack check --feature-powerset --no-dev-deps --at-least-one-of aws-lc-rs,ring
+        run: cargo hack check --feature-powerset --no-dev-deps --at-least-one-of aws-lc-rs,ring --at-least-one-of rand,getrandom
 
   test:
     name: test / ${{ matrix.name }}
@@ -83,5 +83,5 @@ jobs:
       - name: Run tests (--features websocket,portable-atomic)
         run: cargo test --features websocket,portable-atomic
 
-      - name: Run tests (--no-default-features --features ring)
-        run: cargo test --no-default-features --features ring
+      - name: Run tests (--no-default-features --features ring,getrandom)
+        run: cargo test --no-default-features --features ring,getrandom

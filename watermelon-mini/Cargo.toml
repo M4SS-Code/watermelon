@@ -27,11 +27,13 @@ thiserror = "2"
 async-compression = { version = "0.4", features = ["tokio"], optional = true }
 
 [features]
-default = ["aws-lc-rs"]
+default = ["aws-lc-rs", "rand"]
 websocket = ["watermelon-net/websocket"]
 aws-lc-rs = ["tokio-rustls/aws-lc-rs", "watermelon-net/aws-lc-rs", "watermelon-nkeys/aws-lc-rs"]
 ring = ["tokio-rustls/ring", "watermelon-net/ring", "watermelon-nkeys/ring"]
 fips = ["tokio-rustls/fips", "watermelon-net/fips", "watermelon-nkeys/fips"]
+rand = ["watermelon-net/rand"]
+getrandom = ["watermelon-net/getrandom"]
 non-standard-zstd = ["watermelon-net/non-standard-zstd", "watermelon-proto/non-standard-zstd", "dep:async-compression", "async-compression/zstd"]
 
 [lints]

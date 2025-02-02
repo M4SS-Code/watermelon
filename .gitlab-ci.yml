@@ -33,7 +33,7 @@ rust:hack:
     - apk add build-base musl-dev linux-headers cmake perl go
     - cargo install --locked cargo-hack@0.6.34
   script:
-    - cargo hack check --feature-powerset --no-dev-deps --at-least-one-of aws-lc-rs,ring
+    - cargo hack check --feature-powerset --no-dev-deps --at-least-one-of aws-lc-rs,ring --at-least-one-of rand,getrandom
 
 rust:test:
   stage: test
@@ -43,4 +43,4 @@ rust:test:
   script:
     - cargo test
     - cargo test --features websocket,portable-atomic
-    - cargo test --no-default-features --features ring
+    - cargo test --no-default-features --features ring,getrandom
