@@ -51,14 +51,16 @@ pub mod jetstream {
 
     pub use crate::client::{
         AckPolicy, Compression, Consumer, ConsumerBatch, ConsumerConfig, ConsumerDurability,
-        ConsumerSpecificConfig, ConsumerStorage, ConsumerStream, ConsumerStreamError, Consumers,
-        DeliverPolicy, DiscardPolicy, JetstreamClient, ReplayPolicy, RetentionPolicy, Storage,
-        Stream, StreamConfig, StreamState, Streams,
+        ConsumerSpecificConfig, ConsumerStorage, ConsumerStream, Consumers, DeliverPolicy,
+        DiscardPolicy, JetstreamClient, ReplayPolicy, RetentionPolicy, Storage, Stream,
+        StreamConfig, StreamState, Streams,
     };
 
     pub mod error {
         //! NATS Jetstream specific errors
 
-        pub use crate::client::{JetstreamError, JetstreamError2, JetstreamErrorCode};
+        pub use crate::client::{
+            ConsumerStreamError, JetstreamError, JetstreamError2, JetstreamErrorCode,
+        };
     }
 }
