@@ -33,7 +33,6 @@ pub struct ConsumerConfig {
     pub replay_policy: ReplayPolicy,
     pub rate_limit: Option<NonZeroU64>,
     pub flow_control: Option<bool>,
-    pub idle_heartbeat: Duration,
     pub headers_only: bool,
 
     pub specs: ConsumerSpecificConfig,
@@ -57,6 +56,7 @@ pub enum ConsumerSpecificConfig {
     Push {
         deliver_subject: Subject,
         deliver_group: Option<QueueGroup>,
+        idle_heartbeat: Duration,
     },
 }
 
@@ -222,6 +222,7 @@ impl Serialize for ConsumerConfig {
             max_request_max_bytes,
             deliver_subject,
             deliver_group,
+            idle_heartbeat,
         ) = match &self.specs {
             ConsumerSpecificConfig::Pull {
                 max_waiting,
@@ -235,10 +236,12 @@ impl Serialize for ConsumerConfig {
                 *max_request_max_bytes,
                 None,
                 None,
+                Duration::ZERO,
             ),
             ConsumerSpecificConfig::Push {
                 deliver_subject,
                 deliver_group,
+                idle_heartbeat,
             } => (
                 None,
                 None,
@@ -246,6 +249,7 @@ impl Serialize for ConsumerConfig {
                 None,
                 Some(deliver_subject.clone()),
                 deliver_group.clone(),
+                *idle_heartbeat,
             ),
         };
 
@@ -263,7 +267,7 @@ impl Serialize for ConsumerConfig {
             replay_policy: self.replay_policy,
             rate_limit: self.rate_limit,
             flow_control: self.flow_control,
-            idle_heartbeat: self.idle_heartbeat,
+            idle_heartbeat,
             headers_only: self.headers_only,
 
             // Pull based options.
@@ -333,6 +337,7 @@ impl<'de> Deserialize<'de> for ConsumerConfig {
             Some(deliver_subject) => ConsumerSpecificConfig::Push {
                 deliver_subject,
                 deliver_group,
+                idle_heartbeat,
             },
             None => ConsumerSpecificConfig::Pull {
                 max_waiting,
@@ -354,7 +359,6 @@ impl<'de> Deserialize<'de> for ConsumerConfig {
             replay_policy,
             rate_limit,
             flow_control,
-            idle_heartbeat,
             headers_only,
 
             specs,
