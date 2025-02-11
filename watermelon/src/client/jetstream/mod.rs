@@ -118,10 +118,6 @@ impl JetstreamClient {
             .map_err(JetstreamError2::ClientClosed)?;
         let resp = resp.await.map_err(JetstreamError2::ResponseError)?;
 
-        if resp.status_code == Some(StatusCode::NO_RESPONDERS) {
-            return Err(JetstreamError2::ResponseError(ResponseError::NoResponders));
-        }
-
         let json = serde_json::from_slice::<Response<Stream>>(&resp.base.payload)
             .map_err(JetstreamError2::Json)?;
         match json {
@@ -206,10 +202,6 @@ impl JetstreamClient {
             .await
             .map_err(JetstreamError2::ClientClosed)?;
         let resp = resp.await.map_err(JetstreamError2::ResponseError)?;
-
-        if resp.status_code == Some(StatusCode::NO_RESPONDERS) {
-            return Err(JetstreamError2::ResponseError(ResponseError::NoResponders));
-        }
 
         let json = serde_json::from_slice::<Response<Consumer>>(&resp.base.payload)
             .map_err(JetstreamError2::Json)?;
