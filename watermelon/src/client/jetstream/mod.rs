@@ -141,7 +141,10 @@ impl JetstreamClient {
         stream_name: &str,
         config: &ConsumerConfig,
     ) -> Result<Consumer, JetstreamError2> {
-        let mut subject = format!("{}.CONSUMER.CREATE.{}", self.prefix, stream_name);
+        let mut subject = format!(
+            "{}.CONSUMER.CREATE.{}.{}",
+            self.prefix, stream_name, config.name
+        );
         if let [filter_subject] = &*config.filter_subjects {
             subject.push('.');
             subject.push_str(filter_subject);
