@@ -210,9 +210,10 @@ impl Serialize for ConsumerConfig {
             ConsumerDurability::Durable => (self.name.clone(), self.name.clone()),
         };
 
-        let (filter_subject, filter_subjects) = match self.filter_subjects.len() {
-            1 => (Some(self.filter_subjects[0].clone()), Vec::new()),
-            _ => (None, self.filter_subjects.clone()),
+        let (filter_subject, filter_subjects) = if let [filter_subject] = &*self.filter_subjects {
+            (Some(filter_subject.clone()), Vec::new())
+        } else {
+            (None, self.filter_subjects.clone())
         };
 
         let (
