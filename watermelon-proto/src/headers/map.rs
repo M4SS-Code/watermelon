@@ -3,7 +3,7 @@ use alloc::{
     vec,
     vec::Vec,
 };
-use core::{iter, mem, slice};
+use core::mem;
 
 use super::{HeaderName, HeaderValue};
 
@@ -164,65 +164,11 @@ impl OneOrMany {
     }
 
     fn iter(&self) -> impl DoubleEndedIterator<Item = &'_ HeaderValue> {
-        enum Either<'a> {
-            A(iter::Once<&'a HeaderValue>),
-            B(slice::Iter<'a, HeaderValue>),
-        }
-
-        impl<'a> Iterator for Either<'a> {
-            type Item = &'a HeaderValue;
-
-            fn next(&mut self) -> Option<Self::Item> {
-                match self {
-                    Self::A(a) => a.next(),
-                    Self::B(b) => b.next(),
-                }
-            }
-
-            fn size_hint(&self) -> (usize, Option<usize>) {
-                match self {
-                    Self::A(a) => a.size_hint(),
-                    Self::B(b) => b.size_hint(),
-                }
-            }
-
-            fn last(mut self) -> Option<Self::Item> {
-                self.next_back()
-            }
-
-            fn fold<B, F>(self, init: B, f: F) -> B
-            where
-                F: FnMut(B, Self::Item) -> B,
-            {
-                match self {
-                    Self::A(a) => a.fold(init, f),
-                    Self::B(b) => b.fold(init, f),
-                }
-            }
-        }
-
-        impl DoubleEndedIterator for Either<'_> {
-            fn next_back(&mut self) -> Option<Self::Item> {
-                match self {
-                    Self::A(a) => a.next_back(),
-                    Self::B(b) => b.next_back(),
-                }
-            }
-
-            fn rfold<B, F>(self, init: B, f: F) -> B
-            where
-                F: FnMut(B, Self::Item) -> B,
-            {
-                match self {
-                    Self::A(a) => a.rfold(init, f),
-                    Self::B(b) => b.rfold(init, f),
-                }
-            }
-        }
-
+        // This implementation may look odd, but it implements `TrustedLen`,
+        // so the Iterator is efficient to collect.
         match self {
-            Self::One(one) => Either::A(iter::once(one)),
-            Self::Many(many) => Either::B(many.iter()),
+            Self::One(one) => Iterator::chain(Some(one).into_iter(), &[]),
+            Self::Many(many) => Iterator::chain(None.into_iter(), many),
         }
     }
 }
