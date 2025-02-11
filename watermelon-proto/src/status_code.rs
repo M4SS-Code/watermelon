@@ -71,7 +71,7 @@ impl FromStr for StatusCode {
 
 impl Display for StatusCode {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
+        Display::fmt(&self.0, f)
     }
 }
 
