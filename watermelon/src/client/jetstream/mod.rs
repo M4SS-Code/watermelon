@@ -1,3 +1,4 @@
+use std::fmt;
 use std::{fmt::Display, time::Duration};
 
 use bytes::Bytes;
@@ -271,6 +272,12 @@ impl JetstreamErrorCode {
     pub const CONSUMER_DUPLICATE_FILTER_SUBJECTS: Self = Self(10136);
     pub const CONSUMER_OVERLAPPING_FILTER_SUBJECTS: Self = Self(10138);
     pub const CONSUMER_FILTER_SUBJECTS_IS_EMPTY: Self = Self(10139);
+}
+
+impl Display for JetstreamErrorCode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        Display::fmt(&self.0, f)
+    }
 }
 
 impl From<u16> for JetstreamErrorCode {
