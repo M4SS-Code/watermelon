@@ -32,7 +32,6 @@ pub struct ConsumerConfig {
     pub filter_subjects: Vec<Subject>,
     pub replay_policy: ReplayPolicy,
     pub rate_limit: Option<NonZeroU64>,
-    pub flow_control: Option<bool>,
     pub headers_only: bool,
 
     pub specs: ConsumerSpecificConfig,
@@ -56,6 +55,7 @@ pub enum ConsumerSpecificConfig {
     Push {
         deliver_subject: Subject,
         deliver_group: Option<QueueGroup>,
+        flow_control: bool,
         idle_heartbeat: Duration,
     },
 }
@@ -165,8 +165,8 @@ struct RawConsumerConfig {
 
     #[serde(rename = "rate_limit_bps", skip_serializing_if = "Option::is_none")]
     rate_limit: Option<NonZeroU64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    flow_control: Option<bool>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    flow_control: bool,
     #[serde(default, skip_serializing_if = "Duration::is_zero", with = "duration")]
     idle_heartbeat: Duration,
     #[serde(default)]
@@ -223,6 +223,7 @@ impl Serialize for ConsumerConfig {
             max_request_max_bytes,
             deliver_subject,
             deliver_group,
+            flow_control,
             idle_heartbeat,
         ) = match &self.specs {
             ConsumerSpecificConfig::Pull {
@@ -237,11 +238,13 @@ impl Serialize for ConsumerConfig {
                 *max_request_max_bytes,
                 None,
                 None,
+                false,
                 Duration::ZERO,
             ),
             ConsumerSpecificConfig::Push {
                 deliver_subject,
                 deliver_group,
+                flow_control,
                 idle_heartbeat,
             } => (
                 None,
@@ -250,6 +253,7 @@ impl Serialize for ConsumerConfig {
                 None,
                 Some(deliver_subject.clone()),
                 deliver_group.clone(),
+                *flow_control,
                 *idle_heartbeat,
             ),
         };
@@ -267,7 +271,7 @@ impl Serialize for ConsumerConfig {
             filter_subjects,
             replay_policy: self.replay_policy,
             rate_limit: self.rate_limit,
-            flow_control: self.flow_control,
+            flow_control,
             idle_heartbeat,
             headers_only: self.headers_only,
 
@@ -339,6 +343,7 @@ impl<'de> Deserialize<'de> for ConsumerConfig {
                 deliver_subject,
                 deliver_group,
                 idle_heartbeat,
+                flow_control,
             },
             None => ConsumerSpecificConfig::Pull {
                 max_waiting,
@@ -359,7 +364,6 @@ impl<'de> Deserialize<'de> for ConsumerConfig {
             filter_subjects,
             replay_policy,
             rate_limit,
-            flow_control,
             headers_only,
 
             specs,
@@ -402,4 +406,9 @@ impl Default for AckPolicy {
             max_pending: None,
         }
     }
+}
+
+#[expect(clippy::trivially_copy_pass_by_ref, reason = "serde works this way")]
+fn is_false(val: &bool) -> bool {
+    !*val
 }
