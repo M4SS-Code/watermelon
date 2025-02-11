@@ -7,6 +7,8 @@ use core::{iter, mem, slice};
 
 use super::{HeaderName, HeaderValue};
 
+static EMPTY_HEADERS: OneOrMany = OneOrMany::Many(Vec::new());
+
 /// A set of NATS headers
 ///
 /// [`HeaderMap`] is a multimap of [`HeaderName`].
@@ -35,6 +37,17 @@ impl HeaderMap {
             headers: BTreeMap::new(),
             len: 0,
         }
+    }
+
+    pub fn get(&self, name: &HeaderName) -> Option<&HeaderValue> {
+        self.get_all(name).next()
+    }
+
+    pub fn get_all<'a>(
+        &'a self,
+        name: &HeaderName,
+    ) -> impl DoubleEndedIterator<Item = &'a HeaderValue> {
+        self.headers.get(name).unwrap_or(&EMPTY_HEADERS).iter()
     }
 
     pub fn insert(&mut self, name: HeaderName, value: HeaderValue) {
@@ -150,7 +163,7 @@ impl OneOrMany {
         }
     }
 
-    fn iter(&self) -> impl Iterator<Item = &'_ HeaderValue> {
+    fn iter(&self) -> impl DoubleEndedIterator<Item = &'_ HeaderValue> {
         enum Either<'a> {
             A(iter::Once<&'a HeaderValue>),
             B(slice::Iter<'a, HeaderValue>),
