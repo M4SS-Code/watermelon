@@ -3,7 +3,10 @@ use alloc::{
     vec,
     vec::Vec,
 };
-use core::mem;
+use core::{
+    fmt::{self, Debug},
+    mem,
+};
 
 use super::{HeaderName, HeaderValue};
 
@@ -12,13 +15,13 @@ static EMPTY_HEADERS: OneOrMany = OneOrMany::Many(Vec::new());
 /// A set of NATS headers
 ///
 /// [`HeaderMap`] is a multimap of [`HeaderName`].
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct HeaderMap {
     headers: BTreeMap<HeaderName, OneOrMany>,
     len: usize,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 enum OneOrMany {
     One(HeaderValue),
     Many(Vec<HeaderValue>),
@@ -119,6 +122,15 @@ impl HeaderMap {
     }
 }
 
+impl Debug for HeaderMap {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("HeaderMap")
+            .field(&self.headers)
+            // FIXME: switch to `finish_non_exhaustive`
+            .finish()
+    }
+}
+
 impl FromIterator<(HeaderName, HeaderValue)> for HeaderMap {
     fn from_iter<I: IntoIterator<Item = (HeaderName, HeaderValue)>>(iter: I) -> Self {
         let mut this = Self::new();
@@ -138,6 +150,12 @@ impl Extend<(HeaderName, HeaderValue)> for HeaderMap {
 impl Default for HeaderMap {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl Debug for OneOrMany {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_set().entries(self.iter()).finish()
     }
 }
 
