@@ -3,6 +3,7 @@ use std::{fmt::Display, time::Duration};
 use bytes::Bytes;
 use resources::Response;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use watermelon_proto::StatusCode;
 use watermelon_proto::{error::SubjectValidateError, Subject};
 
@@ -128,6 +129,49 @@ impl JetstreamClient {
             Response::Error { error } if error.code == JetstreamErrorCode::STREAM_NOT_FOUND => {
                 Ok(None)
             }
+            Response::Error { error } => Err(JetstreamError2::Status(error)),
+        }
+    }
+
+    /// Create a new consumer
+    ///
+    /// # Errors
+    ///
+    /// It returns an error if the given `stream_name` or consumer name produces an invalid subject
+    /// or if an error occurs while creating the consumer.
+    pub async fn create_consumer(
+        &self,
+        stream_name: &str,
+        config: &ConsumerConfig,
+    ) -> Result<Consumer, JetstreamError2> {
+        let mut subject = format!("{}.CONSUMER.CREATE.{}", self.prefix, stream_name);
+        if let [filter_subject] = &*config.filter_subjects {
+            subject.push('.');
+            subject.push_str(filter_subject);
+        }
+
+        let subject = subject.try_into().map_err(JetstreamError2::Subject)?;
+
+        let payload = serde_json::to_vec(&json!({
+            "stream_name": stream_name,
+            "config": config,
+            "action": "create",
+            "pedantic": true,
+        }))
+        .map_err(JetstreamError2::Json)?;
+        let resp = self
+            .client
+            .request(subject)
+            .response_timeout(self.request_timeout)
+            .payload(payload.into())
+            .await
+            .map_err(JetstreamError2::ClientClosed)?;
+        let resp = resp.await.map_err(JetstreamError2::ResponseError)?;
+
+        let json = serde_json::from_slice::<Response<Consumer>>(&resp.base.payload)
+            .map_err(JetstreamError2::Json)?;
+        match json {
+            Response::Response(consumer) => Ok(consumer),
             Response::Error { error } => Err(JetstreamError2::Status(error)),
         }
     }
