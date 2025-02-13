@@ -21,12 +21,12 @@ where
     S: AsyncRead + AsyncWrite + Unpin,
 {
     #[cfg(feature = "non-standard-zstd")]
-    pub(crate) fn upgrade_zstd(self) -> Self {
+    pub(crate) fn upgrade_zstd(self, compression_level: u8) -> Self {
         let Self::Plain(socket) = self else {
             unreachable!()
         };
 
-        Self::Zstd(ZstdStream::new(socket))
+        Self::Zstd(ZstdStream::new(socket, compression_level))
     }
 
     #[cfg(feature = "non-standard-zstd")]

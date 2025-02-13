@@ -28,7 +28,7 @@ mod util;
 pub struct ConnectFlags {
     pub echo: bool,
     #[cfg(feature = "non-standard-zstd")]
-    pub zstd: bool,
+    pub zstd_compression_level: Option<u8>,
 }
 
 /// Connect to a given address with some reasonable presets.

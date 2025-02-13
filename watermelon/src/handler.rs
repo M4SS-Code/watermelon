@@ -142,7 +142,7 @@ impl Handler {
         flags.echo = matches!(builder.echo, Echo::Allow);
         #[cfg(feature = "non-standard-zstd")]
         {
-            flags.zstd = builder.non_standard_zstd;
+            flags.zstd_compression_level = builder.non_standard_zstd_compression_level;
         }
 
         let (mut conn, info) = match easy_connect(addr, builder.auth_method.as_ref(), flags).await {

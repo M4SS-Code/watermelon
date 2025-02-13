@@ -148,7 +148,7 @@ pub(crate) async fn connect(
     let mut non_standard = NonStandardConnect::default();
     #[cfg(feature = "non-standard-zstd")]
     if matches!(conn, Connection::Streaming(_)) {
-        non_standard.zstd = flags.zstd && info.non_standard.zstd;
+        non_standard.zstd = flags.zstd_compression_level.is_some() && info.non_standard.zstd;
     }
 
     let mut connect = Connect {
@@ -193,8 +193,11 @@ pub(crate) async fn connect(
         match conn {
             Connection::Streaming(streaming) => {
                 if zstd {
-                    let stream = streaming.socket_mut().0.take().unwrap();
-                    streaming.socket_mut().0 = Some(stream.upgrade_zstd());
+                    if let Some(zstd_compression_level) = flags.zstd_compression_level {
+                        let stream = streaming.socket_mut().0.take().unwrap();
+                        streaming.socket_mut().0 =
+                            Some(stream.upgrade_zstd(zstd_compression_level));
+                    }
                 }
             }
             Connection::Websocket(_websocket) => {}

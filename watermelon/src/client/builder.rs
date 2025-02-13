@@ -18,7 +18,7 @@ pub struct ClientBuilder {
     pub(crate) echo: Echo,
     pub(crate) default_response_timeout: Duration,
     #[cfg(feature = "non-standard-zstd")]
-    pub(crate) non_standard_zstd: bool,
+    pub(crate) non_standard_zstd_compression_level: Option<u8>,
 }
 
 /// Whether or not to allow messages published by this client to be echoed back to it's own subscriptions
@@ -44,7 +44,7 @@ impl ClientBuilder {
             echo: Echo::Prevent,
             default_response_timeout: Duration::from_secs(5),
             #[cfg(feature = "non-standard-zstd")]
-            non_standard_zstd: true,
+            non_standard_zstd_compression_level: Some(3),
         }
     }
 
@@ -172,15 +172,21 @@ impl ClientBuilder {
     /// feature on top of the client which, when used in conjunction with a custom zstd reverse proxy
     /// put in from of the NATS server allows for large bandwidth savings.
     ///
+    /// `Some(number)` enables compression with the specified compression level. Out-of-range
+    /// values are clamped into range. `None` disables compression.
+    ///
     /// This option is particularly powerful when combined with [`ClientBuilder::flush_interval`].
     ///
     /// This option is automatically disabled when connecting to an unsupported server.
     ///
-    /// Default: `true` when compiled with the `non-standard-zstd` option.
+    /// Default: `3` when compiled with the `non-standard-zstd` option.
     #[cfg(feature = "non-standard-zstd")]
     #[must_use]
-    pub fn non_standard_zstd(mut self, non_standard_zstd: bool) -> Self {
-        self.non_standard_zstd = non_standard_zstd;
+    pub fn non_standard_zstd_compression_level(
+        mut self,
+        zstd_compression_level: Option<u8>,
+    ) -> Self {
+        self.non_standard_zstd_compression_level = zstd_compression_level;
         self
     }
 

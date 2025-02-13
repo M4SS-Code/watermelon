@@ -5,7 +5,10 @@ use std::{
     task::{Context, Poll},
 };
 
-use async_compression::tokio::{bufread::ZstdDecoder, write::ZstdEncoder};
+use async_compression::{
+    tokio::{bufread::ZstdDecoder, write::ZstdEncoder},
+    Level,
+};
 use tokio::io::{AsyncRead, AsyncWrite, BufReader, ReadBuf};
 
 use crate::util::MaybeConnection;
@@ -20,10 +23,13 @@ where
     S: AsyncRead + AsyncWrite + Unpin,
 {
     #[must_use]
-    pub fn new(stream: S) -> Self {
+    pub fn new(stream: S, compression_level: u8) -> Self {
         Self {
             decoder: ZstdDecoder::new(BufReader::new(MaybeConnection(Some(stream)))),
-            encoder: ZstdEncoder::new(MaybeConnection(None)),
+            encoder: ZstdEncoder::with_quality(
+                MaybeConnection(None),
+                Level::Precise(compression_level.into()),
+            ),
         }
     }
 }
