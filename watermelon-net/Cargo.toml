@@ -22,7 +22,7 @@ tokio-websockets = { version = "0.11.1", features = ["client"], optional = true 
 futures-sink = { version = "0.3.14", default-features = false, optional = true }
 http = { version = "1", optional = true }
 
-watermelon-proto = { version = "0.1.1", path = "../watermelon-proto" }
+watermelon-proto = { version = "0.1.3", path = "../watermelon-proto" }
 
 thiserror = "2"
 pin-project-lite = "0.2.15"
