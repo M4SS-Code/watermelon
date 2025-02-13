@@ -1466,7 +1466,7 @@ dependencies = [
 
 [[package]]
 name = "watermelon-mini"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "async-compression",
  "rustls-platform-verifier",
