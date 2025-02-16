@@ -37,6 +37,7 @@ impl<B: Buf> Buf for BufList<B> {
     }
 
     fn has_remaining(&self) -> bool {
+        debug_assert_eq!(self.len == 0, self.bufs.is_empty());
         !self.bufs.is_empty()
     }
 
@@ -107,6 +108,7 @@ impl<B: Buf> Buf for BufList<B> {
 
         let mut bufs = BytesMut::with_capacity(len);
         bufs.put(self.take(len));
+        debug_assert_eq!(bufs.len(), len);
         bufs.freeze()
     }
 }
