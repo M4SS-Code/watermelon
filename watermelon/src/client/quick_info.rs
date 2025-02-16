@@ -1,4 +1,4 @@
-use crate::atomic::{AtomicU32, Ordering};
+use crate::util::atomic::{AtomicU32, Ordering};
 
 const IS_CONNECTED: u32 = 1 << 0;
 #[cfg(feature = "non-standard-zstd")]

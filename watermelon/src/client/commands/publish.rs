@@ -11,8 +11,8 @@ use watermelon_proto::{
 
 use crate::{
     client::{Client, ClientClosedError, TryCommandError},
-    future::BoxFuture,
     handler::HandlerCommand,
+    util::BoxFuture,
 };
 
 use super::Request;

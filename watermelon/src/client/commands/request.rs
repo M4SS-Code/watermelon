@@ -20,8 +20,8 @@ use watermelon_proto::{
 use crate::{
     client::{Client, ClientClosedError, TryCommandError},
     core::MultiplexedSubscription,
-    future::BoxFuture,
     subscription::Subscription,
+    util::BoxFuture,
 };
 
 use super::Publish;

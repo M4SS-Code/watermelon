@@ -40,11 +40,11 @@ pub(crate) use self::quick_info::RawQuickInfo;
 #[cfg(test)]
 use self::tests::TestHandler;
 use crate::{
-    atomic::{AtomicU64, Ordering},
     core::{MultiplexedSubscription, Subscription},
     handler::{
         Handler, HandlerCommand, HandlerOutput, RecycledHandler, MULTIPLEXED_SUBSCRIPTION_ID,
     },
+    util::atomic::{AtomicU64, Ordering},
 };
 
 mod builder;

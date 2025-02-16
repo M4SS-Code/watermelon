@@ -11,7 +11,7 @@ use watermelon_proto::ServerMessage;
 
 use crate::{
     client::{Consumer, JetstreamClient, JetstreamError2},
-    future::BoxFuture,
+    util::BoxFuture,
 };
 
 use super::{consumer_batch::ConsumerBatchError, ConsumerBatch};

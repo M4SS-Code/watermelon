@@ -2,7 +2,7 @@ use std::{sync::Arc, task::Waker};
 
 use futures_util::task::ArcWake;
 
-use crate::atomic::{AtomicUsize, Ordering};
+use crate::util::atomic::{AtomicUsize, Ordering};
 
 #[derive(Debug)]
 pub(crate) struct FlagWaker(AtomicUsize);

@@ -12,7 +12,7 @@ use watermelon_proto::Subject;
 
 use crate::{
     client::{self, jetstream::JetstreamError2, JetstreamClient},
-    future::BoxFuture,
+    util::BoxFuture,
 };
 
 /// A request to list streams

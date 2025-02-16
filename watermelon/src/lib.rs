@@ -2,14 +2,13 @@
 
 pub use watermelon_proto as proto;
 
-mod atomic;
 mod client;
-mod future;
 mod handler;
 mod multiplexed_subscription;
 mod subscription;
 #[cfg(test)]
 pub(crate) mod tests;
+mod util;
 
 pub mod core {
     //! NATS Core functionality implementation
