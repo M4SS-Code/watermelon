@@ -27,3 +27,36 @@ pub(crate) fn split_spaces(mut bytes: Bytes) -> impl Iterator<Item = Bytes> {
 
     chunks.into_iter().take(found)
 }
+
+#[cfg(test)]
+mod tests {
+    use bytes::Bytes;
+
+    use super::split_spaces;
+
+    #[test]
+    fn combinations() {
+        let tests: &[(&str, &[&str])] = &[
+            ("", &[]),
+            ("0123456789abcdef", &["0123456789abcdef"]),
+            ("012345 6789abcdef", &["012345", "6789abcdef"]),
+            ("012345\t6789abcdef", &["012345", "6789abcdef"]),
+            ("012345  6789abcdef", &["012345", "6789abcdef"]),
+            ("012345        6789abcdef", &["012345", "6789abcdef"]),
+            ("012345\t\t6789abcdef", &["012345", "6789abcdef"]),
+            ("012345\t\t\t\t6789abcdef", &["012345", "6789abcdef"]),
+            ("012345 \t \t\t\t 6789abcdef", &["012345", "6789abcdef"]),
+            ("012345 678 9abcdef", &["012345", "678", "9abcdef"]),
+            ("012345 678\t9abcdef", &["012345", "678", "9abcdef"]),
+            ("012345\t678 9abcdef", &["012345", "678", "9abcdef"]),
+            ("012345\t678\t9abcdef", &["012345", "678", "9abcdef"]),
+            ("012345\t678\t 9abcdef", &["012345", "678", "9abcdef"]),
+            ("012345 \t678\t 9abcdef", &["012345", "678", "9abcdef"]),
+        ];
+
+        for (input, output) in tests {
+            let spaces = split_spaces(Bytes::from_static(input.as_bytes())).collect::<Vec<Bytes>>();
+            assert_eq!(spaces, output.to_vec());
+        }
+    }
+}
