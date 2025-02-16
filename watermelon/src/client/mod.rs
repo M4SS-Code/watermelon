@@ -126,9 +126,12 @@ impl Client {
         let handler = tokio::spawn(async move {
             let mut handle = handle;
 
+            #[expect(clippy::while_let_loop)]
             loop {
                 match (&mut handle).await {
-                    HandlerOutput::ServerError | HandlerOutput::Disconnected => {
+                    HandlerOutput::ServerError
+                    | HandlerOutput::Disconnected
+                    | HandlerOutput::UnexpectedState => {
                         let mut recycle = handle.recycle().await;
 
                         let mut interval = interval(RECONNECT_DELAY);
@@ -145,9 +148,6 @@ impl Client {
                                 Err((_err, prev_recycle)) => recycle = prev_recycle,
                             }
                         }
-                    }
-                    HandlerOutput::UnexpectedState => {
-                        // Retry and hope for the best
                     }
                     HandlerOutput::Closed => break,
                 }
