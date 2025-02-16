@@ -13,7 +13,7 @@ use tokio::{
         oneshot,
     },
     task::JoinHandle,
-    time::{interval, MissedTickBehavior},
+    time::sleep,
 };
 use watermelon_mini::ConnectError;
 #[cfg(test)]
@@ -59,7 +59,8 @@ pub(super) mod from_env;
 
 const CLIENT_OP_CHANNEL_SIZE: usize = 512;
 const SUBSCRIPTION_CHANNEL_SIZE: usize = 256;
-const RECONNECT_DELAY: Duration = Duration::from_secs(10);
+const MIN_RECONNECT_DELAY: Duration = Duration::from_secs(1);
+const MAX_RECONNECT_DELAY: Duration = Duration::from_secs(60);
 
 /// A NATS client
 ///
@@ -134,18 +135,21 @@ impl Client {
                     | HandlerOutput::UnexpectedState => {
                         let mut recycle = handle.recycle().await;
 
-                        let mut interval = interval(RECONNECT_DELAY);
-                        interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
+                        let mut delay = MIN_RECONNECT_DELAY;
 
                         loop {
-                            interval.tick().await;
+                            sleep(delay).await;
 
                             match Handler::connect(&addr, &builder, recycle).await {
                                 Ok(new_handle) => {
                                     handle = new_handle;
                                     break;
                                 }
-                                Err((_err, prev_recycle)) => recycle = prev_recycle,
+                                Err((_err, prev_recycle)) => {
+                                    recycle = prev_recycle;
+                                    delay *= 2;
+                                    delay = delay.min(MAX_RECONNECT_DELAY);
+                                }
                             }
                         }
                     }
