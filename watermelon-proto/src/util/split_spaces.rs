@@ -18,6 +18,7 @@ pub(crate) fn split_spaces(mut bytes: Bytes) -> impl Iterator<Item = Bytes> {
             .iter()
             .take_while(|b| matches!(b, b' ' | b'\t'))
             .count();
+        debug_assert!(spaces > 0);
         bytes.advance(spaces);
         Some(chunk)
     })
