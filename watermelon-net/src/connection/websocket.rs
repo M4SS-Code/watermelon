@@ -1,13 +1,13 @@
 use std::{
     future, io,
     pin::Pin,
-    task::{Context, Poll},
+    sync::Arc,
+    task::{Context, Poll, Wake, Waker},
 };
 
 use bytes::Bytes;
 use futures_core::Stream as _;
 use futures_sink::Sink;
-use futures_util::task::noop_waker_ref;
 use http::Uri;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_websockets::{ClientBuilder, Message, WebSocketStream};
@@ -21,6 +21,8 @@ pub struct WebsocketConnection<S> {
     encoder: FramedEncoder,
     residual_frame: Bytes,
     should_flush: bool,
+    // FIXME: switch to `std::task::Waker::noop` with MSRV >= 1.85
+    noop_waker_polyfill: Waker,
 }
 
 impl<S> WebsocketConnection<S>
@@ -42,6 +44,7 @@ where
             encoder: FramedEncoder::new(),
             residual_frame: Bytes::new(),
             should_flush: false,
+            noop_waker_polyfill: Waker::from(Arc::new(NoopWakerPolyfill)),
         })
     }
 
@@ -84,8 +87,7 @@ where
     }
 
     pub fn may_enqueue_more_ops(&mut self) -> bool {
-        // TODO: switch to `std::task::Waker::noop` with MSRV >= 1.85
-        let mut cx = Context::from_waker(noop_waker_ref());
+        let mut cx = Context::from_waker(&self.noop_waker_polyfill);
         Pin::new(&mut self.socket).poll_ready(&mut cx).is_ready()
     }
 
@@ -142,4 +144,13 @@ fn websockets_error_to_io(err: tokio_websockets::Error) -> io::Error {
         tokio_websockets::Error::Io(err) => err,
         err => io::Error::other(err),
     }
+}
+
+#[derive(Debug)]
+struct NoopWakerPolyfill;
+
+impl Wake for NoopWakerPolyfill {
+    fn wake(self: Arc<Self>) {}
+
+    fn wake_by_ref(self: &Arc<Self>) {}
 }
