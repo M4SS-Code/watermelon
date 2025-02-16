@@ -119,7 +119,7 @@ impl Client {
         let handle = Handler::connect(&addr, &builder, handle)
             .await
             .map_err(|(err, _recycle)| err)?;
-        let info = handle.info().clone();
+        let info = Arc::clone(handle.info());
         let multiplexed_subscription_prefix = handle.multiplexed_subscription_prefix().clone();
         let inbox_prefix = builder.inbox_prefix.clone();
         let default_response_timeout = builder.default_response_timeout;
