@@ -41,7 +41,7 @@ thiserror = "2"
 
 [dev-dependencies]
 tokio = { version = "1.36", features = ["macros"] }
-futures-util = { version = "0.3", default-features = false, features = ["alloc"] }
+futures-util = { version = "0.3", default-features = false }
 claims = "0.8"
 
 [features]
