@@ -1,30 +1,22 @@
-use core::mem;
+use core::{iter, mem};
 
 use bytes::{Buf, Bytes};
 
-pub(crate) fn lines_iter(bytes: Bytes) -> impl Iterator<Item = Bytes> {
-    struct LinesIterator(Bytes);
-
-    impl Iterator for LinesIterator {
-        type Item = Bytes;
-
-        fn next(&mut self) -> Option<Self::Item> {
-            if self.0.is_empty() {
-                return None;
-            }
-
-            Some(match memchr::memmem::find(&self.0, b"\r\n") {
-                Some(i) => {
-                    let chunk = self.0.split_to(i);
-                    self.0.advance("\r\n".len());
-                    chunk
-                }
-                None => mem::take(&mut self.0),
-            })
+pub(crate) fn lines_iter(mut bytes: Bytes) -> impl Iterator<Item = Bytes> {
+    iter::from_fn(move || {
+        if bytes.is_empty() {
+            return None;
         }
-    }
 
-    LinesIterator(bytes)
+        Some(match memchr::memmem::find(&bytes, b"\r\n") {
+            Some(i) => {
+                let chunk = bytes.split_to(i);
+                bytes.advance("\r\n".len());
+                chunk
+            }
+            None => mem::take(&mut bytes),
+        })
+    })
 }
 
 #[cfg(test)]
