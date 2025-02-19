@@ -53,6 +53,9 @@ pub enum KeyPairFromSeedError {
     DecodeError,
 }
 
+/// A payload signed via a [`KeyPair`].
+///
+/// Obtained from [`KeyPair::sign`].
 pub struct Signature(crypto_provider::signature::Signature);
 
 impl KeyPair {
