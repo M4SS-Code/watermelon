@@ -5,7 +5,7 @@ use std::{
 };
 
 use chrono::{DateTime, Utc};
-use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 use watermelon_proto::{QueueGroup, Subject};
 
 use super::{duration, duration_vec, nullable_number, option_nonzero};

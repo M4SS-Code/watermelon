@@ -1,14 +1,14 @@
 use std::{
     future::{self, Future},
     io,
-    pin::{pin, Pin},
+    pin::{Pin, pin},
     task::{Context, Poll},
 };
 
 use bytes::Buf;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite};
 use watermelon_proto::proto::{
-    error::DecoderError, ClientOp, ServerOp, StreamDecoder, StreamEncoder,
+    ClientOp, ServerOp, StreamDecoder, StreamEncoder, error::DecoderError,
 };
 
 #[derive(Debug)]
@@ -51,7 +51,7 @@ where
                 Poll::Ready(Ok(0)) => {
                     return Poll::Ready(Err(StreamingReadError::Io(
                         io::ErrorKind::UnexpectedEof.into(),
-                    )))
+                    )));
                 }
                 Poll::Ready(Err(err)) => return Poll::Ready(Err(StreamingReadError::Io(err))),
             }
@@ -93,7 +93,10 @@ where
         let write_outcome = if chunk.len() < remaining && self.socket.is_write_vectored() {
             let mut bufs = [io::IoSlice::new(&[]); 64];
             let n = self.encoder.chunks_vectored(&mut bufs);
-            debug_assert!(n >= 2, "perf: chunks_vectored yielded less than 2 chunks despite the apparently fragmented internal encoder representation");
+            debug_assert!(
+                n >= 2,
+                "perf: chunks_vectored yielded less than 2 chunks despite the apparently fragmented internal encoder representation"
+            );
 
             Pin::new(&mut self.socket).poll_write_vectored(cx, &bufs[..n])
         } else {
@@ -221,9 +224,11 @@ mod tests {
 
         let mut buf = [0; 1024];
         let mut read_buf = ReadBuf::new(&mut buf);
-        assert!(Pin::new(&mut conn)
-            .poll_read(&mut cx, &mut read_buf)
-            .is_pending());
+        assert!(
+            Pin::new(&mut conn)
+                .poll_read(&mut cx, &mut read_buf)
+                .is_pending()
+        );
 
         // Write PING and verify it was received
         client.enqueue_write_op(&ClientOp::Ping);

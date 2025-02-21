@@ -45,10 +45,10 @@ mod tests {
 
     use super::FramedEncoder;
     use crate::{
+        MessageBase, QueueGroup, Subject,
         headers::{HeaderMap, HeaderName, HeaderValue},
         proto::ClientOp,
         tests::ToBytes as _,
-        MessageBase, QueueGroup, Subject,
     };
 
     #[test]

@@ -2,24 +2,24 @@ use std::io;
 
 use tokio::net::TcpStream;
 use tokio_rustls::{
-    rustls::pki_types::{InvalidDnsNameError, ServerName},
     TlsConnector,
+    rustls::pki_types::{InvalidDnsNameError, ServerName},
 };
 use watermelon_net::{
-    connect_tcp,
+    Connection, StreamingConnection, connect_tcp,
     error::{ConnectionReadError, StreamingReadError},
-    proto_connect, Connection, StreamingConnection,
+    proto_connect,
 };
 #[cfg(feature = "websocket")]
-use watermelon_net::{error::WebsocketReadError, WebsocketConnection};
+use watermelon_net::{WebsocketConnection, error::WebsocketReadError};
 #[cfg(feature = "websocket")]
 use watermelon_proto::proto::error::FrameDecoderError;
 use watermelon_proto::{
-    proto::{error::DecoderError, ServerOp},
     Connect, Host, NonStandardConnect, Protocol, ServerAddr, ServerInfo, Transport,
+    proto::{ServerOp, error::DecoderError},
 };
 
-use crate::{util::MaybeConnection, ConnectFlags, ConnectionCompression};
+use crate::{ConnectFlags, ConnectionCompression, util::MaybeConnection};
 
 use super::{
     authenticator::{AuthenticationError, AuthenticationMethod},
@@ -91,14 +91,14 @@ pub(crate) async fn connect(
         Ok(ServerOp::Info { info }) => info,
         Ok(_) => return Err(ConnectError::UnexpectedServerOp),
         Err(ConnectionReadError::Streaming(StreamingReadError::Io(err))) => {
-            return Err(ConnectError::Io(err))
+            return Err(ConnectError::Io(err));
         }
         Err(ConnectionReadError::Streaming(StreamingReadError::Decoder(err))) => {
-            return Err(ConnectError::Decoder(err))
+            return Err(ConnectError::Decoder(err));
         }
         #[cfg(feature = "websocket")]
         Err(ConnectionReadError::Websocket(WebsocketReadError::Io(err))) => {
-            return Err(ConnectError::Io(err))
+            return Err(ConnectError::Io(err));
         }
         #[cfg(feature = "websocket")]
         Err(ConnectionReadError::Websocket(WebsocketReadError::Decoder(

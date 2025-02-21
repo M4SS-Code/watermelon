@@ -6,9 +6,9 @@ use std::{
 
 use futures_core::{FusedStream, Stream};
 use tokio::sync::mpsc;
-use watermelon_proto::{error::ServerError, ServerMessage, SubscriptionId};
+use watermelon_proto::{ServerMessage, SubscriptionId, error::ServerError};
 
-use crate::core::{error::ClientClosedError, Client};
+use crate::core::{Client, error::ClientClosedError};
 
 const BATCH_RECEIVE_SIZE: usize = 16;
 
@@ -177,10 +177,10 @@ mod tests {
 
     use bytes::Bytes;
     use claims::assert_matches;
-    use futures_util::{task::noop_waker_ref, StreamExt};
+    use futures_util::{StreamExt, task::noop_waker_ref};
     use tokio::sync::mpsc::error::TryRecvError;
     use watermelon_proto::{
-        headers::HeaderMap, MessageBase, ServerMessage, StatusCode, Subject, SubscriptionId,
+        MessageBase, ServerMessage, StatusCode, Subject, SubscriptionId, headers::HeaderMap,
     };
 
     use crate::{core::Client, handler::HandlerCommand};

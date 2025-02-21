@@ -3,8 +3,8 @@ use std::io;
 
 use bytes::Bytes;
 
-use crate::headers::HeaderMap;
 use crate::MessageBase;
+use crate::headers::HeaderMap;
 
 pub use self::framed::FramedEncoder;
 pub use self::stream::StreamEncoder;

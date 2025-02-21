@@ -1,6 +1,6 @@
 use bytes::{BufMut, BytesMut};
 
-use crate::proto::{error::DecoderError, ServerOp};
+use crate::proto::{ServerOp, error::DecoderError};
 
 use super::DecoderStatus;
 
@@ -50,11 +50,11 @@ mod tests {
     use claims::{assert_matches, assert_ok_eq};
 
     use crate::{
+        Subject,
         error::ServerError,
         headers::HeaderMap,
         message::{MessageBase, ServerMessage},
         proto::{error::DecoderError, server::ServerOp},
-        Subject,
     };
 
     use super::StreamDecoder;

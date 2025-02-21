@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use serde::{de, Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, de};
 use watermelon_nkeys::KeyPair;
 use watermelon_proto::Subject;
 

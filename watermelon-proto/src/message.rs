@@ -1,6 +1,6 @@
 use bytes::Bytes;
 
-use crate::{headers::HeaderMap, subscription_id::SubscriptionId, StatusCode, Subject};
+use crate::{StatusCode, Subject, headers::HeaderMap, subscription_id::SubscriptionId};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MessageBase {

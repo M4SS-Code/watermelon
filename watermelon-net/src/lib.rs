@@ -2,7 +2,7 @@
 
 #[cfg(feature = "websocket")]
 pub use self::connection::WebsocketConnection;
-pub use self::connection::{connect as proto_connect, Connection, StreamingConnection};
+pub use self::connection::{Connection, StreamingConnection, connect as proto_connect};
 pub use self::happy_eyeballs::connect as connect_tcp;
 
 mod connection;

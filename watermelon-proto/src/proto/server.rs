@@ -1,6 +1,6 @@
 use alloc::boxed::Box;
 
-use crate::{error::ServerError, message::ServerMessage, ServerInfo};
+use crate::{ServerInfo, error::ServerError, message::ServerMessage};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum ServerOp {

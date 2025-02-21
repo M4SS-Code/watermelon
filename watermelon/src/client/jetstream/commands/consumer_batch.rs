@@ -7,8 +7,8 @@ use std::{
 use futures_core::{FusedStream, Future, Stream};
 use pin_project_lite::pin_project;
 use serde_json::json;
-use tokio::time::{sleep, Sleep};
-use watermelon_proto::{error::ServerError, ServerMessage, StatusCode};
+use tokio::time::{Sleep, sleep};
+use watermelon_proto::{ServerMessage, StatusCode, error::ServerError};
 
 use crate::{
     client::{Consumer, JetstreamClient, JetstreamError2},

@@ -6,8 +6,8 @@ use core::{
 };
 
 use bytestring::ByteString;
-use percent_encoding::{percent_decode_str, percent_encode, NON_ALPHANUMERIC};
-use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use percent_encoding::{NON_ALPHANUMERIC, percent_decode_str, percent_encode};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 use url::Url;
 
 /// Address of a NATS server

@@ -5,8 +5,8 @@ use std::{
 
 use bytes::Bytes;
 use watermelon_proto::{
-    headers::{HeaderMap, HeaderName, HeaderValue},
     MessageBase, Subject,
+    headers::{HeaderMap, HeaderName, HeaderValue},
 };
 
 use crate::{

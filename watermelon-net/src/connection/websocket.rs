@@ -12,7 +12,7 @@ use http::Uri;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_websockets::{ClientBuilder, Message, WebSocketStream};
 use watermelon_proto::proto::{
-    decode_frame, error::FrameDecoderError, ClientOp, FramedEncoder, ServerOp,
+    ClientOp, FramedEncoder, ServerOp, decode_frame, error::FrameDecoderError,
 };
 
 #[derive(Debug)]
@@ -66,7 +66,7 @@ where
                 }
                 Poll::Ready(Some(Ok(_message))) => {}
                 Poll::Ready(Some(Err(err))) => {
-                    return Poll::Ready(Err(WebsocketReadError::Io(websockets_error_to_io(err))))
+                    return Poll::Ready(Err(WebsocketReadError::Io(websockets_error_to_io(err))));
                 }
                 Poll::Ready(None) => return Poll::Ready(Err(WebsocketReadError::Closed)),
             }

@@ -5,7 +5,7 @@ use std::{
 };
 
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
-use tokio_rustls::{client::TlsStream, rustls::pki_types::ServerName, TlsConnector};
+use tokio_rustls::{TlsConnector, client::TlsStream, rustls::pki_types::ServerName};
 
 #[derive(Debug)]
 #[expect(

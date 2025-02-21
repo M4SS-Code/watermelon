@@ -3,7 +3,7 @@ use core::{
     fmt::{self, Display},
     ops::Deref,
 };
-use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
 use bytestring::ByteString;
 
@@ -214,34 +214,69 @@ mod tests {
     fn invalid_subjects() {
         let subjects = [
             ("", SubjectValidateError::Empty),
-
-            ("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", SubjectValidateError::TooLong),
-
+            (
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                SubjectValidateError::TooLong,
+            ),
             ("cmd ", SubjectValidateError::IllegalCharacter),
             ("cmd .endpoint", SubjectValidateError::IllegalCharacter),
             (" cmd", SubjectValidateError::IllegalCharacter),
             ("cmd.endpoint ", SubjectValidateError::IllegalCharacter),
-            ("cmd.endpoint.detail ", SubjectValidateError::IllegalCharacter),
-            ("cmd.endpoint.detail\r", SubjectValidateError::IllegalCharacter),
-            ("cmd.endpoint.detail\n", SubjectValidateError::IllegalCharacter),
-            ("cmd.endpoint.detail\t", SubjectValidateError::IllegalCharacter),
-            ("cmd.endp oint.detail", SubjectValidateError::IllegalCharacter),
-            ("cmd.endp\roint.detail", SubjectValidateError::IllegalCharacter),
-            ("cmd.endp\noint.detail", SubjectValidateError::IllegalCharacter),
-            ("cmd.endp\toint.detail", SubjectValidateError::IllegalCharacter),
-            ("cmd.endpoint .detail", SubjectValidateError::IllegalCharacter),
-            ("cmd.endpoint\r.detail", SubjectValidateError::IllegalCharacter),
-            ("cmd.endpoint\n.detail", SubjectValidateError::IllegalCharacter),
-            ("cmd.endpoint\t.detail", SubjectValidateError::IllegalCharacter),
+            (
+                "cmd.endpoint.detail ",
+                SubjectValidateError::IllegalCharacter,
+            ),
+            (
+                "cmd.endpoint.detail\r",
+                SubjectValidateError::IllegalCharacter,
+            ),
+            (
+                "cmd.endpoint.detail\n",
+                SubjectValidateError::IllegalCharacter,
+            ),
+            (
+                "cmd.endpoint.detail\t",
+                SubjectValidateError::IllegalCharacter,
+            ),
+            (
+                "cmd.endp oint.detail",
+                SubjectValidateError::IllegalCharacter,
+            ),
+            (
+                "cmd.endp\roint.detail",
+                SubjectValidateError::IllegalCharacter,
+            ),
+            (
+                "cmd.endp\noint.detail",
+                SubjectValidateError::IllegalCharacter,
+            ),
+            (
+                "cmd.endp\toint.detail",
+                SubjectValidateError::IllegalCharacter,
+            ),
+            (
+                "cmd.endpoint .detail",
+                SubjectValidateError::IllegalCharacter,
+            ),
+            (
+                "cmd.endpoint\r.detail",
+                SubjectValidateError::IllegalCharacter,
+            ),
+            (
+                "cmd.endpoint\n.detail",
+                SubjectValidateError::IllegalCharacter,
+            ),
+            (
+                "cmd.endpoint\t.detail",
+                SubjectValidateError::IllegalCharacter,
+            ),
             (" ", SubjectValidateError::IllegalCharacter),
             ("\r", SubjectValidateError::IllegalCharacter),
             ("\n", SubjectValidateError::IllegalCharacter),
             ("\t", SubjectValidateError::IllegalCharacter),
-
             ("cmd..endpoint", SubjectValidateError::BrokenToken),
             (".cmd.endpoint", SubjectValidateError::BrokenToken),
             ("cmd.endpoint.", SubjectValidateError::BrokenToken),
-
             ("cmd.**", SubjectValidateError::BrokenWildcard),
             ("cmd.**.endpoint", SubjectValidateError::BrokenWildcard),
             ("cmd.a*.endpoint", SubjectValidateError::BrokenWildcard),

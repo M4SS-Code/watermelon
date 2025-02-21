@@ -9,9 +9,9 @@ use tokio::io::{AsyncRead, AsyncWrite};
 #[cfg(feature = "websocket")]
 use watermelon_proto::proto::error::FrameDecoderError;
 use watermelon_proto::{
-    error::ServerError,
-    proto::{error::DecoderError, ClientOp, ServerOp},
     Connect,
+    error::ServerError,
+    proto::{ClientOp, ServerOp, error::DecoderError},
 };
 
 pub use self::streaming::{StreamingConnection, StreamingReadError};
@@ -240,10 +240,10 @@ where
                 return Err(ConnectError::UnexpectedOp);
             }
             Err(ConnectionReadError::Streaming(StreamingReadError::Decoder(err))) => {
-                return Err(ConnectError::Proto(err))
+                return Err(ConnectError::Proto(err));
             }
             Err(ConnectionReadError::Streaming(StreamingReadError::Io(err))) => {
-                return Err(ConnectError::Io(err))
+                return Err(ConnectError::Io(err));
             }
             #[cfg(feature = "websocket")]
             Err(ConnectionReadError::Websocket(WebsocketReadError::Decoder(
@@ -255,7 +255,7 @@ where
             ))) => todo!(),
             #[cfg(feature = "websocket")]
             Err(ConnectionReadError::Websocket(WebsocketReadError::Io(err))) => {
-                return Err(ConnectError::Io(err))
+                return Err(ConnectError::Io(err));
             }
             #[cfg(feature = "websocket")]
             Err(ConnectionReadError::Websocket(WebsocketReadError::Closed)) => todo!(),

@@ -2,8 +2,8 @@ use alloc::boxed::Box;
 use core::num::NonZeroU64;
 
 use crate::{
-    connect::Connect, message::MessageBase, queue_group::QueueGroup,
-    subscription_id::SubscriptionId, Subject,
+    Subject, connect::Connect, message::MessageBase, queue_group::QueueGroup,
+    subscription_id::SubscriptionId,
 };
 
 #[derive(Debug)]

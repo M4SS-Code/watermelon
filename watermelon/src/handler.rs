@@ -20,17 +20,17 @@ use tokio::{
     time::{self, Instant, Sleep},
 };
 use watermelon_mini::{
-    easy_connect, ConnectError, ConnectFlags, ConnectionCompression, ConnectionSecurity,
+    ConnectError, ConnectFlags, ConnectionCompression, ConnectionSecurity, easy_connect,
 };
 use watermelon_net::Connection;
 use watermelon_proto::{
+    MessageBase, QueueGroup, ServerAddr, ServerInfo, ServerMessage, Subject, SubscriptionId,
     error::ServerError,
     headers::HeaderMap,
     proto::{ClientOp, ServerOp},
-    MessageBase, QueueGroup, ServerAddr, ServerInfo, ServerMessage, Subject, SubscriptionId,
 };
 
-use crate::client::{create_inbox_subject, QuickInfo, RawQuickInfo};
+use crate::client::{QuickInfo, RawQuickInfo, create_inbox_subject};
 use crate::core::{ClientBuilder, Echo};
 
 pub(crate) const MULTIPLEXED_SUBSCRIPTION_ID: SubscriptionId = SubscriptionId::MIN;
@@ -472,7 +472,10 @@ impl Future for Handler {
                     FlushAction::Start
                 }
                 (ReceiveOutcome::NoMoreSpace, true, should_flush) => {
-                    debug_assert!(should_flush, "the connection is out space for writing but doesn't report the need to flush");
+                    debug_assert!(
+                        should_flush,
+                        "the connection is out space for writing but doesn't report the need to flush"
+                    );
 
                     // There's no more space to write, but the implementation automatically
                     // flushes so we're good
@@ -589,8 +592,10 @@ impl Handler {
                                 payload,
                                 reply,
                             } => {
-                                debug_assert!(reply_subject
-                                    .starts_with(&*self.multiplexed_subscription_prefix));
+                                debug_assert!(
+                                    reply_subject
+                                        .starts_with(&*self.multiplexed_subscription_prefix)
+                                );
 
                                 let multiplexed_subscriptions =
                                     if let Some(multiplexed_subscriptions) =
@@ -619,8 +624,10 @@ impl Handler {
                                 self.conn.enqueue_write_op(&ClientOp::Publish { message });
                             }
                             HandlerCommand::UnsubscribeMultiplexed { reply_subject } => {
-                                debug_assert!(reply_subject
-                                    .starts_with(&*self.multiplexed_subscription_prefix));
+                                debug_assert!(
+                                    reply_subject
+                                        .starts_with(&*self.multiplexed_subscription_prefix)
+                                );
 
                                 if let Some(multiplexed_subscriptions) =
                                     &mut self.multiplexed_subscriptions

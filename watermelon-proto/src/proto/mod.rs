@@ -1,5 +1,5 @@
 pub use self::client::ClientOp;
-pub use self::decoder::{decode_frame, StreamDecoder};
+pub use self::decoder::{StreamDecoder, decode_frame};
 pub use self::encoder::{FramedEncoder, StreamEncoder};
 pub use self::server::ServerOp;
 

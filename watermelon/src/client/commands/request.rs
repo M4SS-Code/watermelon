@@ -10,11 +10,11 @@ use std::{
 use bytes::Bytes;
 use futures_core::Stream;
 use pin_project_lite::pin_project;
-use tokio::time::{sleep, Sleep};
+use tokio::time::{Sleep, sleep};
 use watermelon_proto::{
+    ServerMessage, StatusCode, Subject,
     error::ServerError,
     headers::{HeaderMap, HeaderName, HeaderValue},
-    ServerMessage, StatusCode, Subject,
 };
 
 use crate::{

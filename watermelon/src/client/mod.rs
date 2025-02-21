@@ -9,7 +9,7 @@ use arc_swap::ArcSwap;
 use bytes::Bytes;
 use tokio::{
     sync::{
-        mpsc::{self, error::TrySendError, Permit},
+        mpsc::{self, Permit, error::TrySendError},
         oneshot,
     },
     task::JoinHandle,
@@ -19,7 +19,7 @@ use watermelon_mini::ConnectError;
 #[cfg(test)]
 use watermelon_proto::NonStandardServerInfo;
 use watermelon_proto::{
-    headers::HeaderMap, QueueGroup, ServerAddr, ServerInfo, Subject, SubscriptionId,
+    QueueGroup, ServerAddr, ServerInfo, Subject, SubscriptionId, headers::HeaderMap,
 };
 
 pub use self::builder::{ClientBuilder, Echo};
@@ -42,7 +42,7 @@ use self::tests::TestHandler;
 use crate::{
     core::{MultiplexedSubscription, Subscription},
     handler::{
-        Handler, HandlerCommand, HandlerOutput, RecycledHandler, MULTIPLEXED_SUBSCRIPTION_ID,
+        Handler, HandlerCommand, HandlerOutput, MULTIPLEXED_SUBSCRIPTION_ID, RecycledHandler,
     },
     util::atomic::{AtomicU64, Ordering},
 };

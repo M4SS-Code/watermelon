@@ -2,12 +2,12 @@ use std::{
     future::{self, Future},
     io,
     net::SocketAddr,
-    pin::{pin, Pin},
+    pin::{Pin, pin},
     task::{Context, Poll},
     time::Duration,
 };
 
-use futures_core::{stream::FusedStream, Stream};
+use futures_core::{Stream, stream::FusedStream};
 use pin_project_lite::pin_project;
 use tokio::{
     net::{self, TcpStream},
@@ -139,7 +139,7 @@ where
             match this.connecting.poll_join_next(cx) {
                 Poll::Pending => dead_end = false,
                 Poll::Ready(Some(maybe_conn)) => {
-                    return Poll::Ready(Some(maybe_conn.expect("connect panicked")))
+                    return Poll::Ready(Some(maybe_conn.expect("connect panicked")));
                 }
                 Poll::Ready(None) => {}
             }

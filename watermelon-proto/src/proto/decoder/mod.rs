@@ -4,17 +4,17 @@ use bytes::{Buf, Bytes, BytesMut};
 use bytestring::ByteString;
 
 use crate::{
+    MessageBase, ServerMessage, StatusCode, Subject, SubscriptionId,
     error::ServerError,
     headers::{
-        error::{HeaderNameValidateError, HeaderValueValidateError},
         HeaderMap, HeaderName, HeaderValue,
+        error::{HeaderNameValidateError, HeaderValueValidateError},
     },
     status_code::StatusCodeError,
     util::{self, ParseUintError},
-    MessageBase, ServerMessage, StatusCode, Subject, SubscriptionId,
 };
 
-pub use self::framed::{decode_frame, FrameDecoderError};
+pub use self::framed::{FrameDecoderError, decode_frame};
 pub use self::stream::StreamDecoder;
 
 use super::ServerOp;

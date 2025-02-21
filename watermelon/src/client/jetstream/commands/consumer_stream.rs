@@ -14,7 +14,7 @@ use crate::{
     util::BoxFuture,
 };
 
-use super::{consumer_batch::ConsumerBatchError, ConsumerBatch};
+use super::{ConsumerBatch, consumer_batch::ConsumerBatchError};
 
 pin_project! {
     /// A consumer stream of batch requests

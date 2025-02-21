@@ -24,8 +24,9 @@ mod nullable_number {
     use std::{any::type_name, fmt::Display};
 
     use serde::{
+        Deserialize, Deserializer, Serialize, Serializer,
         de::{self, DeserializeOwned},
-        ser, Deserialize, Deserializer, Serialize, Serializer,
+        ser,
     };
 
     pub(crate) trait NullableNumber: Copy + Display {
@@ -84,7 +85,7 @@ mod nullable_number {
 mod option_nonzero {
     use std::num::NonZeroU32;
 
-    use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializer};
+    use serde::{Deserialize, Deserializer, Serialize, Serializer, de::DeserializeOwned};
 
     pub(crate) trait NonZeroNumber: Copy {
         type Inner: Copy + Default + From<Self> + TryInto<Self> + Serialize + DeserializeOwned;

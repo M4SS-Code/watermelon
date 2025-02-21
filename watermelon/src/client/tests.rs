@@ -5,7 +5,7 @@ use tokio::sync::mpsc;
 use watermelon_proto::{ServerInfo, Subject};
 
 use crate::{
-    client::{create_inbox_subject, RawQuickInfo},
+    client::{RawQuickInfo, create_inbox_subject},
     handler::HandlerCommand,
 };
 

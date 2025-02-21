@@ -6,8 +6,8 @@ use std::{
 };
 
 use async_compression::{
-    tokio::{bufread::ZstdDecoder, write::ZstdEncoder},
     Level,
+    tokio::{bufread::ZstdDecoder, write::ZstdEncoder},
 };
 use tokio::io::{AsyncRead, AsyncWrite, BufReader, ReadBuf};
 

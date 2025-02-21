@@ -152,9 +152,9 @@ mod tests {
     #[cfg(feature = "std")]
     use crate::proto::encoder::FrameEncoder;
     use crate::{
+        MessageBase, QueueGroup, Subject,
         headers::{HeaderMap, HeaderName, HeaderValue},
         proto::ClientOp,
-        MessageBase, QueueGroup, Subject,
     };
 
     #[test]

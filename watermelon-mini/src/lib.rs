@@ -5,8 +5,8 @@ use std::sync::Arc;
 use rustls_platform_verifier::Verifier;
 use tokio::net::TcpStream;
 use tokio_rustls::{
-    rustls::{self, crypto::CryptoProvider, version::TLS13, ClientConfig},
     TlsConnector,
+    rustls::{self, ClientConfig, crypto::CryptoProvider, version::TLS13},
 };
 use watermelon_net::Connection;
 use watermelon_proto::{ServerAddr, ServerInfo};

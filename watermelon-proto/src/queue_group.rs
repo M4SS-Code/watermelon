@@ -3,7 +3,7 @@ use core::{
     fmt::{self, Display},
     ops::Deref,
 };
-use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
 use bytestring::ByteString;
 

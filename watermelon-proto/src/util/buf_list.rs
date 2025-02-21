@@ -118,7 +118,7 @@ mod tests {
     #[cfg(feature = "std")]
     use std::io;
 
-    use bytes::{buf::Chain, Buf};
+    use bytes::{Buf, buf::Chain};
 
     use super::BufList;
 
