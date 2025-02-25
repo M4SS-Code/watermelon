@@ -1,6 +1,7 @@
 use std::{
     collections::{BTreeMap, VecDeque},
     future::Future,
+    mem,
     num::NonZeroU64,
     ops::ControlFlow,
     pin::Pin,
@@ -45,7 +46,8 @@ pub(crate) struct Handler {
     >,
     info: Arc<ArcSwap<ServerInfo>>,
     quick_info: Arc<RawQuickInfo>,
-    delayed_flusher: Option<DelayedFlusher>,
+    delayed_writer: Option<DelayedWriter>,
+    writing: bool,
     flushing: bool,
     shutting_down: bool,
 
@@ -64,10 +66,11 @@ pub(crate) struct Handler {
 }
 
 #[derive(Debug)]
-struct DelayedFlusher {
-    // INVARIANT: `interval != Duration::ZERO`
-    interval: Duration,
-    delay: Pin<Box<Option<Sleep>>>,
+struct DelayedWriter {
+    // INVARIANT: `duration != Duration::ZERO`
+    duration: Duration,
+    delay: Pin<Box<Sleep>>,
+    delay_consumed: bool,
 }
 
 #[derive(Debug)]
@@ -182,12 +185,13 @@ impl Handler {
             }
         }
 
-        let delayed_flusher = if builder.flush_interval.is_zero() {
+        let delayed_writer = if builder.write_delay.is_zero() {
             None
         } else {
-            Some(DelayedFlusher {
-                interval: builder.flush_interval,
-                delay: Box::pin(None),
+            Some(DelayedWriter {
+                duration: builder.write_delay,
+                delay: Box::pin(time::sleep(builder.write_delay)),
+                delay_consumed: true,
             })
         };
 
@@ -195,7 +199,8 @@ impl Handler {
             conn,
             info: Arc::new(ArcSwap::new(Arc::from(info))),
             quick_info: recycle.quick_info,
-            delayed_flusher,
+            delayed_writer,
+            writing: false,
             flushing: false,
             shutting_down: false,
             ping_interval: Box::pin(time::sleep(PING_INTERVAL)),
@@ -405,14 +410,7 @@ impl Handler {
 impl Future for Handler {
     type Output = HandlerOutput;
 
-    #[expect(clippy::too_many_lines)]
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        #[derive(Debug, Copy, Clone)]
-        enum FlushAction {
-            Start,
-            Stop,
-        }
-
         let this = self.get_mut();
         if Pin::new(&mut this.ping_interval).poll(cx).is_ready() {
             if let Err(output) = this.ping(cx) {
@@ -439,111 +437,74 @@ impl Future for Handler {
             this.reset_ping_interval();
         }
 
-        loop {
+        let mut iterate_again = true;
+        while mem::take(&mut iterate_again) {
             let receive_outcome = this.receive_command(cx);
-            let write_waker_registered = match &mut this.conn {
-                Connection::Streaming(streaming) => {
-                    if streaming.may_write() {
-                        match streaming.poll_write_next(cx) {
-                            Poll::Pending => true,
-                            Poll::Ready(Ok(_n)) => false,
-                            Poll::Ready(Err(_err)) => {
-                                return Poll::Ready(HandlerOutput::Disconnected);
-                            }
-                        }
-                    } else {
-                        true
-                    }
-                }
-                Connection::Websocket(_) => true,
-            };
-
-            let flushes_automatically_when_full = this.conn.flushes_automatically_when_full();
-            let should_flush = this.conn.should_flush();
-
-            let flush_action = match (
-                receive_outcome,
-                flushes_automatically_when_full,
-                should_flush,
-            ) {
-                (ReceiveOutcome::NoMoreCommands, _, true) => {
-                    // We have written everything there was to write,
-                    // and some data is buffered
-                    FlushAction::Start
-                }
-                (ReceiveOutcome::NoMoreSpace, true, should_flush) => {
-                    debug_assert!(
-                        should_flush,
-                        "the connection is out space for writing but doesn't report the need to flush"
-                    );
-
-                    // There's no more space to write, but the implementation automatically
-                    // flushes so we're good
-                    FlushAction::Stop
-                }
-                (ReceiveOutcome::NoMoreSpace, false, true) => {
-                    // There's no more space to write, and the implementation doesn't
-                    // flush automatically
-                    FlushAction::Start
-                }
-                (_, _, false) => {
-                    // There's nothing to flush
-                    FlushAction::Stop
-                }
-            };
-
-            match flush_action {
-                FlushAction::Start => {
-                    this.flushing = true;
-                    if let Some(delayed_flusher) = &mut this.delayed_flusher {
-                        if delayed_flusher.delay.is_none() {
-                            delayed_flusher
-                                .delay
-                                .set(Some(time::sleep(delayed_flusher.interval)));
-                        }
-                    }
-                }
-                FlushAction::Stop => {
-                    this.flushing = false;
-                }
+            if matches!(receive_outcome, ReceiveOutcome::NoMoreSpace) {
+                // We reached the soft limit on the write buffer so
+                // immediately start the write process.
+                this.writing = true;
             }
 
-            match (receive_outcome, write_waker_registered) {
-                (ReceiveOutcome::NoMoreCommands, true) => {
-                    // There are no more commands to receive and writing is blocked.
-                    // There's no progress to be made
-                    break;
+            match &mut this.conn {
+                Connection::Streaming(streaming) => {
+                    if streaming.may_write() {
+                        if !this.writing
+                            && (this.flushing
+                                || DelayedWriter::can_proceed(&mut this.delayed_writer, cx))
+                        {
+                            // We weren't writing, but we were either flushing (so going
+                            // back to writing is kind of free) or we're allowed to start
+                            // writing again anyways.
+                            this.writing = true;
+                        }
+
+                        if this.writing {
+                            match streaming.poll_write_next(cx) {
+                                Poll::Pending => {
+                                    // There's no point in flushing. The underlying
+                                    // `AsyncWrite` implementation already flushes
+                                    // when full.
+                                    this.flushing = false;
+                                }
+                                Poll::Ready(Ok(_n)) => {
+                                    // Iterate again to register the waker and to try encoding
+                                    // and writing more stuff.
+                                    iterate_again = true;
+                                }
+                                Poll::Ready(Err(_err)) => {
+                                    return Poll::Ready(HandlerOutput::Disconnected);
+                                }
+                            }
+                        }
+                    } else if this.writing {
+                        // We must have been in a writing state, but now there's
+                        // nothing left to write. Start flushing.
+                        this.writing = false;
+                        this.flushing = true;
+                    }
                 }
-                (ReceiveOutcome::NoMoreSpace, true) => {
-                    // There's no more space to write and writing is blocked.
-                    // There's no progress to be made
-                    break;
+                #[cfg(feature = "websocket")]
+                Connection::Websocket(websocket) => {
+                    if websocket.should_flush()
+                        && !this.flushing
+                        && DelayedWriter::can_proceed(&mut this.delayed_writer, cx)
+                    {
+                        this.flushing = true;
+                    }
                 }
-                (_, false) => {
-                    // At least the write waker must be registered
-                    continue;
+                #[cfg(not(feature = "websocket"))]
+                Connection::Websocket(_) => {
+                    debug_assert!(false, "should never be constructed");
                 }
             }
         }
 
         if this.flushing {
-            let mut can_flush = true;
-            if let Some(delay_flusher) = &mut this.delayed_flusher {
-                if let Some(delay) = delay_flusher.delay.as_mut().as_pin_mut() {
-                    if delay.poll(cx).is_ready() {
-                        delay_flusher.delay.set(None);
-                    } else {
-                        can_flush = false;
-                    }
-                }
-            }
-
-            if can_flush {
-                match this.conn.poll_flush(cx) {
-                    Poll::Pending => {}
-                    Poll::Ready(Ok(())) => this.flushing = false,
-                    Poll::Ready(Err(_err)) => return Poll::Ready(HandlerOutput::Disconnected),
-                }
+            match this.conn.poll_flush(cx) {
+                Poll::Pending => {}
+                Poll::Ready(Ok(())) => this.flushing = false,
+                Poll::Ready(Err(_err)) => return Poll::Ready(HandlerOutput::Disconnected),
             }
         }
 
@@ -699,6 +660,28 @@ impl Handler {
         }
 
         ReceiveOutcome::NoMoreSpace
+    }
+}
+
+impl DelayedWriter {
+    fn can_proceed(this: &mut Option<Self>, cx: &mut Context<'_>) -> bool {
+        if let Some(delayed_writer) = this {
+            if mem::take(&mut delayed_writer.delay_consumed) {
+                delayed_writer
+                    .delay
+                    .as_mut()
+                    .reset(Instant::now() + delayed_writer.duration);
+            }
+
+            if delayed_writer.delay.as_mut().poll(cx).is_ready() {
+                delayed_writer.delay_consumed = true;
+                true
+            } else {
+                false
+            }
+        } else {
+            true
+        }
     }
 }
 

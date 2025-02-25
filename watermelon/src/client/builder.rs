@@ -13,7 +13,7 @@ use crate::core::Client;
 #[derive(Debug)]
 pub struct ClientBuilder {
     pub(crate) auth_method: Option<AuthenticationMethod>,
-    pub(crate) flush_interval: Duration,
+    pub(crate) write_delay: Duration,
     pub(crate) inbox_prefix: Subject,
     pub(crate) echo: Echo,
     pub(crate) default_response_timeout: Duration,
@@ -39,7 +39,7 @@ impl ClientBuilder {
     pub(super) fn new() -> Self {
         Self {
             auth_method: None,
-            flush_interval: Duration::ZERO,
+            write_delay: Duration::ZERO,
             inbox_prefix: Subject::from_static("_INBOX"),
             echo: Echo::Prevent,
             default_response_timeout: Duration::from_secs(5),
@@ -109,10 +109,10 @@ impl ClientBuilder {
         self
     }
 
-    /// Define a flush interval
+    /// Define a delay for small writes
     ///
-    /// Setting a non-zero flush interval allows the client to generate
-    /// larger TLS and TCP packets at the cost of increased latency. Using
+    /// Setting a non-zero delay allows the client to generate larger
+    /// TLS and TCP packets at the cost of increased latency. Using
     /// a value greater than a few seconds may break the client in
     /// unexpected ways.
     ///
@@ -122,8 +122,8 @@ impl ClientBuilder {
     ///
     /// Default: 0
     #[must_use]
-    pub fn flush_interval(mut self, flush_interval: Duration) -> Self {
-        self.flush_interval = flush_interval;
+    pub fn write_delay(mut self, write_delay: Duration) -> Self {
+        self.write_delay = write_delay;
         self
     }
 
@@ -175,7 +175,7 @@ impl ClientBuilder {
     /// `Some(number)` enables compression with the specified compression level. Out-of-range
     /// values are clamped into range. `None` disables compression.
     ///
-    /// This option is particularly powerful when combined with [`ClientBuilder::flush_interval`].
+    /// This option is particularly powerful when combined with [`ClientBuilder::write_delay`].
     ///
     /// This option is automatically disabled when connecting to an unsupported server.
     ///
@@ -197,6 +197,12 @@ impl ClientBuilder {
     /// It returns an error if the connection fails.
     pub async fn connect(self, addr: ServerAddr) -> Result<Client, ConnectError> {
         Client::connect(addr, self).await
+    }
+
+    #[must_use]
+    #[deprecated(since = "0.2.2", note = "renamed to `write_delay`")]
+    pub fn flush_interval(self, flush_interval: Duration) -> Self {
+        self.write_delay(flush_interval)
     }
 }
 
