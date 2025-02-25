@@ -121,8 +121,6 @@ pub(super) fn encode<E: FrameEncoder>(encoder: &mut E, item: &ClientOp) {
 
             if let Some(max_messages) = *max_messages {
                 encoder.small_write(b" ");
-
-                let mut buffer = itoa::Buffer::new();
                 encoder.small_write(buffer.format(max_messages.get()).as_bytes());
             }
 
