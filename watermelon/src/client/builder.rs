@@ -170,7 +170,7 @@ impl ClientBuilder {
     /// use of the network, making applications running on extremely slow or expensive internet
     /// connections infeasible. This option adds a non-standard zstd compression
     /// feature on top of the client which, when used in conjunction with a custom zstd reverse proxy
-    /// put in from of the NATS server allows for large bandwidth savings.
+    /// put in front of the NATS server allows for large bandwidth savings.
     ///
     /// `Some(number)` enables compression with the specified compression level. Out-of-range
     /// values are clamped into range. `None` disables compression.
