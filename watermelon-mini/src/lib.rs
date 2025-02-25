@@ -23,12 +23,22 @@ pub(crate) mod non_standard_zstd;
 mod proto;
 mod util;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 #[non_exhaustive]
 pub struct ConnectFlags {
     pub echo: bool,
     #[cfg(feature = "non-standard-zstd")]
     pub zstd_compression_level: Option<u8>,
+}
+
+impl Default for ConnectFlags {
+    fn default() -> Self {
+        Self {
+            echo: false,
+            #[cfg(feature = "non-standard-zstd")]
+            zstd_compression_level: Some(3),
+        }
+    }
 }
 
 /// Connect to a given address with some reasonable presets.
