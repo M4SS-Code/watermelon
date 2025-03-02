@@ -34,8 +34,7 @@ pub async fn connect(addr: &ServerAddr) -> io::Result<TcpStream> {
     match addr.host() {
         Host::Ip(ip) => TcpStream::connect(SocketAddr::new(*ip, addr.port())).await,
         Host::Dns(host) => {
-            let host = <_ as AsRef<str>>::as_ref(host);
-            let addrs = net::lookup_host((host, addr.port())).await?;
+            let addrs = net::lookup_host((&**host, addr.port())).await?;
 
             let mut happy_eyeballs = pin!(HappyEyeballs::new(IterToStream { iter: addrs }));
             let mut last_err = None;
@@ -60,11 +59,10 @@ pub async fn connect(addr: &ServerAddr) -> io::Result<TcpStream> {
 pin_project! {
     #[project = HappyEyeballsProj]
     struct HappyEyeballs<D> {
+        #[pin]
         dns: Option<D>,
         dns_received: Vec<SocketAddr>,
-        connecting: JoinSet<
-            io::Result<TcpStream>,
-        >,
+        connecting: JoinSet<io::Result<TcpStream>>,
         last_attempted: Option<LastAttempted>,
         #[pin]
         next_attempt_delay: Option<Sleep>,
@@ -113,66 +111,49 @@ impl<D> HappyEyeballsProj<'_, D> {
 
 impl<D> Stream for HappyEyeballs<D>
 where
-    D: Stream<Item = SocketAddr> + Unpin,
+    D: Stream<Item = SocketAddr>,
 {
     type Item = io::Result<TcpStream>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let mut this = self.project();
-        let mut dead_end = true;
 
-        while let Some(dns) = &mut this.dns {
-            match Pin::new(&mut *dns).poll_next(cx) {
-                Poll::Pending => {
-                    dead_end = false;
-                    break;
-                }
-                Poll::Ready(Some(record)) => {
-                    dead_end = false;
-                    this.dns_received.push(record);
-                }
-                Poll::Ready(None) => *this.dns = None,
+        while let Some(dns) = this.dns.as_mut().as_pin_mut() {
+            match dns.poll_next(cx) {
+                Poll::Pending => break,
+                Poll::Ready(Some(record)) => this.dns_received.push(record),
+                Poll::Ready(None) => this.dns.set(None),
             }
         }
 
         loop {
             match this.connecting.poll_join_next(cx) {
-                Poll::Pending => dead_end = false,
+                Poll::Pending => {
+                    if let Some(next_attempt_delay) = this.next_attempt_delay.as_mut().as_pin_mut()
+                    {
+                        match next_attempt_delay.poll(cx) {
+                            Poll::Pending => break,
+                            Poll::Ready(()) => this.next_attempt_delay.set(None),
+                        }
+                    }
+                }
                 Poll::Ready(Some(maybe_conn)) => {
                     return Poll::Ready(Some(maybe_conn.expect("connect panicked")));
                 }
                 Poll::Ready(None) => {}
             }
 
-            let make_new_attempt = if this.connecting.is_empty() {
-                true
-            } else if let Some(next_attempt_delay) = this.next_attempt_delay.as_mut().as_pin_mut() {
-                match next_attempt_delay.poll(cx) {
-                    Poll::Pending => false,
-                    Poll::Ready(()) => {
-                        this.next_attempt_delay.set(None);
-                        true
-                    }
-                }
-            } else {
-                true
-            };
-            if !make_new_attempt {
+            let Some(record) = this.next_dns_record() else {
+                this.next_attempt_delay.set(None);
                 break;
-            }
-
-            match this.next_dns_record() {
-                Some(record) => {
-                    let conn_fut = TcpStream::connect(record);
-                    this.connecting.spawn(conn_fut);
-                    this.next_attempt_delay
-                        .set(Some(time::sleep(CONN_ATTEMPT_DELAY)));
-                }
-                None => break,
-            }
+            };
+            let conn_fut = TcpStream::connect(record);
+            this.connecting.spawn(conn_fut);
+            this.next_attempt_delay
+                .set(Some(time::sleep(CONN_ATTEMPT_DELAY)));
         }
 
-        if dead_end {
+        if this.dns.is_none() && this.connecting.is_empty() && this.next_attempt_delay.is_none() {
             Poll::Ready(None)
         } else {
             Poll::Pending
@@ -191,10 +172,10 @@ where
 
 impl<D> FusedStream for HappyEyeballs<D>
 where
-    D: Stream<Item = SocketAddr> + Unpin,
+    D: Stream<Item = SocketAddr>,
 {
     fn is_terminated(&self) -> bool {
-        self.dns.is_none() && self.dns_received.is_empty() && self.connecting.is_empty()
+        self.dns.is_none() && self.connecting.is_empty() && self.next_attempt_delay.is_none()
     }
 }
 
