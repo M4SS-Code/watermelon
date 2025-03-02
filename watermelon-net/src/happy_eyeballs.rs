@@ -213,3 +213,64 @@ impl LastAttempted {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::{
+        net::{Ipv4Addr, Ipv6Addr},
+        pin::pin,
+    };
+
+    use futures_util::{StreamExt as _, stream};
+    use tokio::net::TcpListener;
+
+    use super::HappyEyeballs;
+
+    #[tokio::test]
+    async fn happy_eyeballs_prefer_v6() {
+        let ipv4_listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await.unwrap();
+        let ipv6_listener = TcpListener::bind((Ipv6Addr::LOCALHOST, 0)).await.unwrap();
+
+        let ipv4_addr = ipv4_listener.local_addr().unwrap();
+        let ipv6_addr = ipv6_listener.local_addr().unwrap();
+
+        tokio::spawn(async move { while ipv6_listener.accept().await.is_ok() {} });
+
+        let addrs = stream::iter([ipv4_addr, ipv6_addr]);
+        let mut happy_eyeballs = pin!(HappyEyeballs::new(addrs));
+        let conn = happy_eyeballs.next().await.unwrap().unwrap();
+        assert!(conn.peer_addr().unwrap().is_ipv6());
+    }
+
+    #[tokio::test]
+    async fn happy_eyeballs_fallback_v4() {
+        let ipv4_listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await.unwrap();
+        let ipv6_listener = TcpListener::bind((Ipv6Addr::LOCALHOST, 0)).await.unwrap();
+
+        let ipv4_addr = ipv4_listener.local_addr().unwrap();
+        let ipv6_addr = ipv6_listener.local_addr().unwrap();
+
+        drop(ipv6_listener);
+        tokio::spawn(async move { while ipv4_listener.accept().await.is_ok() {} });
+
+        let addrs = stream::iter([ipv4_addr, ipv6_addr]);
+        let mut happy_eyeballs = pin!(HappyEyeballs::new(addrs));
+        let _v6_failure = happy_eyeballs.next().await;
+        let conn = happy_eyeballs.next().await.unwrap().unwrap();
+        assert!(conn.peer_addr().unwrap().is_ipv4());
+    }
+
+    #[tokio::test]
+    async fn happy_eyeballs_only_v4_available() {
+        let ipv4_listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await.unwrap();
+
+        let ipv4_addr = ipv4_listener.local_addr().unwrap();
+
+        tokio::spawn(async move { while ipv4_listener.accept().await.is_ok() {} });
+
+        let addrs = stream::iter([ipv4_addr]);
+        let mut happy_eyeballs = pin!(HappyEyeballs::new(addrs));
+        let conn = happy_eyeballs.next().await.unwrap().unwrap();
+        assert!(conn.peer_addr().unwrap().is_ipv4());
+    }
+}
