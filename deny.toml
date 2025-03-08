@@ -1,5 +1,7 @@
 [advisories]
 ignore = [
+    # The `paste` indirect dependency is unmaintained
+    "RUSTSEC-2024-0436",
 ]
 
 [licenses]
