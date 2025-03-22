@@ -1,6 +1,6 @@
 use std::{num::NonZeroU32, time::Duration};
 
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 
 use super::{compression, duration, nullable_datetime, nullable_number, opposite_bool};
@@ -10,7 +10,7 @@ use super::{compression, duration, nullable_datetime, nullable_number, opposite_
 pub struct Stream {
     pub config: StreamConfig,
     #[serde(rename = "created")]
-    pub created_at: DateTime<Utc>,
+    pub created_at: Timestamp,
     // TODO: `cluster`
 }
 
@@ -21,10 +21,10 @@ pub struct StreamState {
     pub bytes: u64,
     pub first_sequence: u64,
     #[serde(with = "nullable_datetime", rename = "first_ts")]
-    pub first_sequence_timestamp: Option<DateTime<Utc>>,
+    pub first_sequence_timestamp: Option<Timestamp>,
     pub last_sequence: u64,
     #[serde(with = "nullable_datetime", rename = "last_ts")]
-    pub last_sequence_timestamp: Option<DateTime<Utc>>,
+    pub last_sequence_timestamp: Option<Timestamp>,
     pub consumer_count: u32,
 }
 

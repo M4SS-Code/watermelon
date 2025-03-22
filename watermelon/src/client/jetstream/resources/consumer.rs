@@ -4,7 +4,7 @@ use std::{
     time::Duration,
 };
 
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 use watermelon_proto::{QueueGroup, Subject};
 
@@ -16,7 +16,7 @@ pub struct Consumer {
     pub stream_name: String,
     pub config: ConsumerConfig,
     #[serde(rename = "created")]
-    pub created_at: DateTime<Utc>,
+    pub created_at: Timestamp,
 }
 
 /// A Jetstream consumer configuration
@@ -88,7 +88,7 @@ pub enum DeliverPolicy {
     #[serde(rename = "by_start_time")]
     StartTime {
         #[serde(rename = "opt_start_time")]
-        from: DateTime<Utc>,
+        from: Timestamp,
     },
 }
 

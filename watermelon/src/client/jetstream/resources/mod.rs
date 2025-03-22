@@ -117,14 +117,17 @@ mod option_nonzero {
 }
 
 mod nullable_datetime {
-    use chrono::{DateTime, Datelike, Utc};
+    use jiff::Timestamp;
     use serde::{Deserialize, Deserializer};
+
+    // 0001-01-01T00:00:00Z
+    const GOLANG_ZERO: Timestamp = Timestamp::constant(-62_135_596_800, 0);
 
     pub(crate) fn deserialize<'de, D: Deserializer<'de>>(
         deserializer: D,
-    ) -> Result<Option<DateTime<Utc>>, D::Error> {
-        let datetime = <DateTime<Utc>>::deserialize(deserializer)?;
-        Ok(if datetime.year() == 1 {
+    ) -> Result<Option<Timestamp>, D::Error> {
+        let datetime = <Timestamp>::deserialize(deserializer)?;
+        Ok(if datetime == GOLANG_ZERO {
             None
         } else {
             Some(datetime)
