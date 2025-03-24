@@ -13,7 +13,7 @@ rust-version.workspace = true
 features = ["websocket", "non-standard-zstd"]
 
 [dependencies]
-tokio = { version = "1.37", features = ["rt", "sync", "time"] }
+tokio = { version = "1.37", features = ["macros", "rt", "sync", "time"] }
 arc-swap = "1"
 futures-core = "0.3"
 bytes = "1"

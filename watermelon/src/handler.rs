@@ -14,6 +14,7 @@ use arc_swap::ArcSwap;
 use bytes::Bytes;
 use tokio::{
     net::TcpStream,
+    select,
     sync::{
         mpsc::{self, error::TrySendError},
         oneshot,
@@ -62,7 +63,7 @@ pub(crate) struct Handler {
     multiplexed_subscriptions: Option<BTreeMap<Subject, oneshot::Sender<ServerMessage>>>,
     subscriptions: BTreeMap<SubscriptionId, Subscription>,
 
-    awaiting_close: Vec<oneshot::Sender<()>>,
+    shutdown_recv: mpsc::Receiver<()>,
 }
 
 #[derive(Debug)]
@@ -81,7 +82,7 @@ pub(crate) struct RecycledHandler {
     multiplexed_subscription_prefix: Subject,
     subscriptions: BTreeMap<SubscriptionId, Subscription>,
 
-    awaiting_close: Vec<oneshot::Sender<()>>,
+    shutdown_recv: mpsc::Receiver<()>,
 }
 
 #[derive(Debug)]
@@ -118,7 +119,6 @@ pub(crate) enum HandlerCommand {
         id: SubscriptionId,
         max_messages: Option<NonZero<u64>>,
     },
-    Close(oneshot::Sender<()>),
 }
 
 #[derive(Debug)]
@@ -139,8 +139,8 @@ impl Handler {
     pub(crate) async fn connect(
         addr: &ServerAddr,
         builder: &ClientBuilder,
-        recycle: RecycledHandler,
-    ) -> Result<Self, (ConnectError, RecycledHandler)> {
+        mut recycle: RecycledHandler,
+    ) -> Result<Option<Self>, (ConnectError, RecycledHandler)> {
         let mut flags = ConnectFlags::default();
         flags.echo = matches!(builder.echo, Echo::Allow);
         #[cfg(feature = "non-standard-zstd")]
@@ -148,9 +148,17 @@ impl Handler {
             flags.zstd_compression_level = builder.non_standard_zstd_compression_level;
         }
 
-        let (mut conn, info) = match easy_connect(addr, builder.auth_method.as_ref(), flags).await {
-            Ok(items) => items,
-            Err(err) => return Err((err, recycle)),
+        let (mut conn, info) = select! {
+            biased;
+            () = recycle.wait_shutdown() => {
+                return Ok(None);
+            },
+            connect_result = easy_connect(addr, builder.auth_method.as_ref(), flags) => {
+                match connect_result {
+                    Ok(items) => items,
+                    Err(err) => return Err((err, recycle)),
+                }
+            }
         };
 
         #[cfg(feature = "non-standard-zstd")]
@@ -195,7 +203,7 @@ impl Handler {
             })
         };
 
-        Ok(Self {
+        Ok(Some(Self {
             conn,
             info: Arc::new(ArcSwap::new(Arc::from(info))),
             quick_info: recycle.quick_info,
@@ -211,8 +219,8 @@ impl Handler {
             subscriptions: recycle.subscriptions,
             multiplexed_subscription_prefix: recycle.multiplexed_subscription_prefix,
             multiplexed_subscriptions: None,
-            awaiting_close: recycle.awaiting_close,
-        })
+            shutdown_recv: recycle.shutdown_recv,
+        }))
     }
 
     pub(crate) async fn recycle(mut self) -> RecycledHandler {
@@ -224,7 +232,7 @@ impl Handler {
             quick_info: self.quick_info,
             subscriptions: self.subscriptions,
             multiplexed_subscription_prefix: self.multiplexed_subscription_prefix,
-            awaiting_close: self.awaiting_close,
+            shutdown_recv: self.shutdown_recv,
         }
     }
 
@@ -402,6 +410,16 @@ impl Handler {
         }
     }
 
+    #[cold]
+    fn begin_shutdown(&mut self) {
+        if self.shutting_down {
+            return;
+        }
+
+        self.shutting_down = true;
+        self.commands.close();
+    }
+
     fn reset_ping_interval(&mut self) {
         Sleep::reset(self.ping_interval.as_mut(), Instant::now() + PING_INTERVAL);
     }
@@ -420,6 +438,10 @@ impl Future for Handler {
 
         if this.quick_info.get().is_failed_unsubscribe {
             this.failed_unsubscribe();
+        }
+
+        if !this.shutdown_recv.poll_recv(cx).is_ready() {
+            this.begin_shutdown();
         }
 
         let mut handled_server_op = false;
@@ -647,11 +669,6 @@ impl Handler {
                                     });
                                 }
                             }
-                            HandlerCommand::Close(sender) => {
-                                self.shutting_down = true;
-                                self.awaiting_close.push(sender);
-                                self.commands.close();
-                            }
                         }
                     }
                 }
@@ -690,14 +707,19 @@ impl RecycledHandler {
         commands: mpsc::Receiver<HandlerCommand>,
         quick_info: Arc<RawQuickInfo>,
         builder: &ClientBuilder,
+        shutdown_recv: mpsc::Receiver<()>,
     ) -> Self {
         Self {
             commands,
             quick_info,
             subscriptions: BTreeMap::new(),
             multiplexed_subscription_prefix: create_inbox_subject(&builder.inbox_prefix),
-            awaiting_close: Vec::new(),
+            shutdown_recv,
         }
+    }
+
+    pub(crate) async fn wait_shutdown(&mut self) {
+        let _ = self.shutdown_recv.recv().await;
     }
 }
 

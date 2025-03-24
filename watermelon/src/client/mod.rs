@@ -5,6 +5,7 @@ use std::{fmt::Write, num::NonZero, process::abort, sync::Arc, time::Duration};
 use arc_swap::ArcSwap;
 use bytes::Bytes;
 use tokio::{
+    select,
     sync::{
         mpsc::{self, Permit, error::TrySendError},
         oneshot,
@@ -79,6 +80,7 @@ struct ClientInner {
     inbox_prefix: Subject,
     default_response_timeout: Duration,
     handler: JoinHandle<()>,
+    shutdown_sender: mpsc::Sender<()>,
 }
 
 /// An error encountered while trying to publish a command to a closed [`Client`]
@@ -111,11 +113,19 @@ impl Client {
     ) -> Result<Self, ConnectError> {
         let (sender, receiver) = mpsc::channel(CLIENT_OP_CHANNEL_SIZE);
 
+        let (shutdown_sender, shutdown_receiver) = mpsc::channel(1);
+
         let quick_info = Arc::new(RawQuickInfo::new());
-        let handle = RecycledHandler::new(receiver, Arc::clone(&quick_info), &builder);
+        let handle = RecycledHandler::new(
+            receiver,
+            Arc::clone(&quick_info),
+            &builder,
+            shutdown_receiver,
+        );
         let handle = Handler::connect(&addr, &builder, handle)
             .await
-            .map_err(|(err, _recycle)| err)?;
+            .map_err(|(err, _recycle)| err)?
+            .expect("shutdown while connecting");
         let info = Arc::clone(handle.info());
         let multiplexed_subscription_prefix = handle.multiplexed_subscription_prefix().clone();
         let inbox_prefix = builder.inbox_prefix.clone();
@@ -135,12 +145,22 @@ impl Client {
                         let mut delay = MIN_RECONNECT_DELAY;
 
                         loop {
-                            sleep(delay).await;
+                            select! {
+                                biased;
+                                () = recycle.wait_shutdown() => {
+                                    return;
+                                },
+                                () = sleep(delay) => {},
+                            }
 
                             match Handler::connect(&addr, &builder, recycle).await {
-                                Ok(new_handle) => {
+                                Ok(Some(new_handle)) => {
                                     handle = new_handle;
                                     break;
+                                }
+                                Ok(None) => {
+                                    // shutdown
+                                    return;
                                 }
                                 Err((_err, prev_recycle)) => {
                                     recycle = prev_recycle;
@@ -165,6 +185,7 @@ impl Client {
                 inbox_prefix,
                 default_response_timeout,
                 handler,
+                shutdown_sender,
             }),
         })
     }
@@ -173,6 +194,7 @@ impl Client {
     pub(crate) fn test(client_to_handler_chan_size: usize) -> (Self, TestHandler) {
         let builder = Self::builder();
         let (sender, receiver) = mpsc::channel(client_to_handler_chan_size);
+        let (shutdown_sender, shutdown_receiver) = mpsc::channel(1);
         let info = Arc::new(ArcSwap::new(Arc::from(ServerInfo {
             id: "1234".to_owned(),
             name: "watermelon-test".to_owned(),
@@ -214,6 +236,7 @@ impl Client {
                 inbox_prefix: builder.inbox_prefix,
                 default_response_timeout: builder.default_response_timeout,
                 handler: tokio::spawn(async move {}),
+                shutdown_sender,
             }),
         };
         let handler = TestHandler {
@@ -463,16 +486,11 @@ impl Client {
     /// Attempts to send commands to the NATS server after this method has been called will
     /// result into a [`ClientClosedError`] error.
     pub async fn close(&self) {
-        let (sender, receiver) = oneshot::channel();
-        if self
-            .enqueue_command(HandlerCommand::Close(sender))
-            .await
-            .is_err()
-        {
-            return;
-        }
+        // If this fails to send, either another shutdown is already in flight or the client
+        // has already been shutdown.
+        let _ = self.inner.shutdown_sender.try_send(());
 
-        let _ = receiver.await;
+        self.inner.shutdown_sender.closed().await;
     }
 }
 
