@@ -49,7 +49,7 @@ pub enum KeyPairFromSeedError {
     #[error("invalid seed prefix")]
     InvalidPrefix,
     /// the seed could not be decoded by the crypto backend
-    #[error("")]
+    #[error("decode error")]
     DecodeError,
 }
 
