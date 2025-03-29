@@ -132,3 +132,72 @@ impl Display for PublicKey<'_> {
         Display::fmt(&BASE32_NOPAD.encode_display(&full_raw_seed), f)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use claims::assert_matches;
+
+    use super::{KeyPair, KeyPairFromSeedError};
+
+    #[test]
+    fn sign() {
+        let key = KeyPair::from_encoded_seed(
+            "SAAPN4W3EG6KCJGUQTKTJ5GSB5NHK5CHAJL4DBGFUM3HHROI4XUEP4OBK4",
+        )
+        .unwrap();
+        assert_eq!(
+            "HuHkn4SHFW1ibjQzmqyNw8KUZDWB0bKciDbK7YmNyqyyvC3k4s0AqimAz6jMt0xhLqGAOyj30UaUol2xMVpsBQ",
+            key.sign(b"fwD9iyDvqxpcj3ii").to_string()
+        );
+    }
+
+    #[test]
+    fn gen_public_key() {
+        let key = KeyPair::from_encoded_seed(
+            "SAAPN4W3EG6KCJGUQTKTJ5GSB5NHK5CHAJL4DBGFUM3HHROI4XUEP4OBK4",
+        )
+        .unwrap();
+        assert_eq!(
+            "SAAJYMSGSUUUC3GAOKL2IFAAKQDV32K4X45HPCPC4EBM7F7N76HQGR4C2I",
+            key.public_key().to_string()
+        );
+    }
+
+    #[test]
+    fn invalid_len() {
+        assert_matches!(
+            KeyPair::from_encoded_seed(""),
+            Err(KeyPairFromSeedError::InvalidSeedLength)
+        );
+    }
+
+    #[test]
+    fn invalid_base32() {
+        assert_matches!(
+            KeyPair::from_encoded_seed(
+                "SAAPN4W3EG6KCJGUQTKTJ5!#B5NHK5CHAJL4DBGFUM3HHROI4XUEP4OBK4"
+            ),
+            Err(KeyPairFromSeedError::InvalidBase32)
+        )
+    }
+
+    #[test]
+    fn invalid_crc() {
+        assert_matches!(
+            KeyPair::from_encoded_seed(
+                "FAAPN4W3EG6KCJGUQTKTJ5GSB5NHK5CHAJL4DBGFUM3HHROI4XUEP4OBK4"
+            ),
+            Err(KeyPairFromSeedError::BadCrc)
+        )
+    }
+
+    #[test]
+    fn invalid_prefix() {
+        assert_matches!(
+            KeyPair::from_encoded_seed(
+                "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+            ),
+            Err(KeyPairFromSeedError::InvalidPrefix)
+        )
+    }
+}

@@ -16,6 +16,9 @@ crc = "3.2.1"
 thiserror = "2"
 data-encoding = { version = "2.7.0", default-features = false }
 
+[dev-dependencies]
+claims = "0.8"
+
 [features]
 default = ["aws-lc-rs"]
 aws-lc-rs = ["dep:aws-lc-rs"]
