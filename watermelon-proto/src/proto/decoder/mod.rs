@@ -11,7 +11,7 @@ use crate::{
         error::{HeaderNameValidateError, HeaderValueValidateError},
     },
     status_code::StatusCodeError,
-    util::{self, ParseUintError},
+    util::{self, CrlfFinder, ParseUintError},
 };
 
 pub use self::framed::{FrameDecoderError, decode_frame};
@@ -61,6 +61,7 @@ impl BytesLike for Bytes {}
 impl BytesLike for BytesMut {}
 
 pub(super) fn decode(
+    crlf: &CrlfFinder,
     status: &mut DecoderStatus,
     read_buf: &mut impl BytesLike,
 ) -> Result<Option<ServerOp>, DecoderError> {
@@ -82,7 +83,7 @@ pub(super) fn decode(
                     return Ok(None);
                 }
 
-                let Some(control_line_len) = memchr::memmem::find(read_buf, b"\r\n") else {
+                let Some(control_line_len) = crlf.find(read_buf) else {
                     return if read_buf.len() < MAX_HEAD_LEN {
                         *last_bytes_read = read_buf.len();
                         Ok(None)
@@ -133,7 +134,7 @@ pub(super) fn decode(
                     return Ok(None);
                 }
 
-                decode_headers(read_buf, status)?;
+                decode_headers(crlf, read_buf, status)?;
             }
             DecoderStatus::Payload { payload_len, .. } => {
                 if read_buf.len() < *payload_len + "\r\n".len() {
@@ -277,6 +278,7 @@ fn decode_hmsg(mut control_line: Bytes) -> Result<DecoderStatus, DecoderError> {
 }
 
 fn decode_headers(
+    crlf: &CrlfFinder,
     read_buf: &mut impl BytesLike,
     status: &mut DecoderStatus,
 ) -> Result<(), DecoderError> {
@@ -292,7 +294,7 @@ fn decode_headers(
     };
 
     let header = read_buf.split_to(header_len);
-    let mut lines = util::lines_iter(header);
+    let mut lines = util::lines_iter(crlf, header);
     let head = lines.next().ok_or(DecoderError::MissingHead)?;
     let head = head
         .strip_prefix(b"NATS/1.0")

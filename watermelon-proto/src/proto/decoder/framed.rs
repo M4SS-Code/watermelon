@@ -1,6 +1,6 @@
 use bytes::Bytes;
 
-use crate::proto::ServerOp;
+use crate::{proto::ServerOp, util::CrlfFinder};
 
 use super::{DecoderError, DecoderStatus};
 
@@ -11,7 +11,7 @@ use super::{DecoderError, DecoderStatus};
 /// It returns an error in case the frame is incomplete or if a decoding error occurs.
 pub fn decode_frame(frame: &mut Bytes) -> Result<ServerOp, FrameDecoderError> {
     let mut status = DecoderStatus::ControlLine { last_bytes_read: 0 };
-    match super::decode(&mut status, frame) {
+    match super::decode(&CrlfFinder::new(), &mut status, frame) {
         Ok(Some(server_op)) => Ok(server_op),
         Ok(None) => Err(FrameDecoderError::IncompleteFrame),
         Err(err) => Err(FrameDecoderError::Decoder(err)),

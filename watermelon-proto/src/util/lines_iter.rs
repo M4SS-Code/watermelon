@@ -2,13 +2,15 @@ use core::{iter, mem};
 
 use bytes::{Buf, Bytes};
 
-pub(crate) fn lines_iter(mut bytes: Bytes) -> impl Iterator<Item = Bytes> {
+use super::CrlfFinder;
+
+pub(crate) fn lines_iter(crlf: &CrlfFinder, mut bytes: Bytes) -> impl Iterator<Item = Bytes> + '_ {
     iter::from_fn(move || {
         if bytes.is_empty() {
             return None;
         }
 
-        Some(match memchr::memmem::find(&bytes, b"\r\n") {
+        Some(match crlf.find(&bytes) {
             Some(i) => {
                 let chunk = bytes.split_to(i);
                 bytes.advance("\r\n".len());
@@ -22,6 +24,8 @@ pub(crate) fn lines_iter(mut bytes: Bytes) -> impl Iterator<Item = Bytes> {
 #[cfg(test)]
 mod tests {
     use bytes::{Bytes, BytesMut};
+
+    use crate::util::CrlfFinder;
 
     use super::lines_iter;
 
@@ -41,6 +45,6 @@ mod tests {
         let expected_chunks = expected_chunks
             .iter()
             .map(|c| Bytes::from_static(c.as_bytes()));
-        assert!(expected_chunks.eq(lines_iter(combined_chunk)));
+        assert!(expected_chunks.eq(lines_iter(&CrlfFinder::new(), combined_chunk)));
     }
 }

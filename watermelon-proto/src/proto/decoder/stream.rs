@@ -1,6 +1,9 @@
 use bytes::{BufMut, BytesMut};
 
-use crate::proto::{ServerOp, error::DecoderError};
+use crate::{
+    proto::{ServerOp, error::DecoderError},
+    util::CrlfFinder,
+};
 
 use super::DecoderStatus;
 
@@ -10,6 +13,7 @@ const INITIAL_READ_BUF_CAPACITY: usize = 64 * 1024;
 pub struct StreamDecoder {
     read_buf: BytesMut,
     status: DecoderStatus,
+    crlf: CrlfFinder,
 }
 
 impl StreamDecoder {
@@ -18,6 +22,7 @@ impl StreamDecoder {
         Self {
             read_buf: BytesMut::with_capacity(INITIAL_READ_BUF_CAPACITY),
             status: DecoderStatus::ControlLine { last_bytes_read: 0 },
+            crlf: CrlfFinder::new(),
         }
     }
 
@@ -34,7 +39,7 @@ impl StreamDecoder {
     ///
     /// It returns an error if a decoding error occurs.
     pub fn decode(&mut self) -> Result<Option<ServerOp>, DecoderError> {
-        super::decode(&mut self.status, &mut self.read_buf)
+        super::decode(&self.crlf, &mut self.status, &mut self.read_buf)
     }
 }
 
