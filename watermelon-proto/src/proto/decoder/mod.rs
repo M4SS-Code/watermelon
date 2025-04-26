@@ -299,8 +299,8 @@ fn decode_headers(
     let head = head
         .strip_prefix(b"NATS/1.0")
         .ok_or(DecoderError::InvalidHead)?;
-    let status_code = if head.len() >= 4 {
-        Some(StatusCode::from_ascii_bytes(&head[1..4]).map_err(DecoderError::StatusCode)?)
+    let status_code = if let Some(status_code) = head.get(1..4) {
+        Some(StatusCode::from_ascii_bytes(status_code).map_err(DecoderError::StatusCode)?)
     } else {
         None
     };
