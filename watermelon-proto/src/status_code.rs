@@ -1,6 +1,6 @@
 use core::{
     fmt::{self, Display, Formatter},
-    num::NonZeroU16,
+    num::NonZero,
     str::FromStr,
 };
 
@@ -15,7 +15,7 @@ use crate::util;
 ///
 /// Values are guaranteed to be in range `100..1000`.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct StatusCode(NonZeroU16);
+pub struct StatusCode(NonZero<u16>);
 
 impl StatusCode {
     /// The Jetstream consumer hearthbeat timeout has been reached with no new messages to deliver
@@ -54,7 +54,7 @@ impl StatusCode {
     }
 
     const fn new_internal(val: u16) -> Self {
-        match NonZeroU16::new(val) {
+        match NonZero::new(val) {
             Some(val) => Self(val),
             None => unreachable!(),
         }
@@ -80,7 +80,7 @@ impl TryFrom<u16> for StatusCode {
 
     fn try_from(value: u16) -> Result<Self, Self::Error> {
         if (100..1000).contains(&value) {
-            Ok(Self(NonZeroU16::new(value).unwrap()))
+            Ok(Self(NonZero::new(value).unwrap()))
         } else {
             Err(StatusCodeError)
         }

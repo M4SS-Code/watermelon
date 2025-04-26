@@ -142,7 +142,7 @@ impl Default for StreamEncoder {
 
 #[cfg(test)]
 mod tests {
-    use core::num::NonZeroU64;
+    use core::num::NonZero;
     #[cfg(feature = "std")]
     use std::io::IoSlice;
 
@@ -260,7 +260,7 @@ mod tests {
         let mut encoder = StreamEncoder::new();
         encoder.enqueue_write_op(&ClientOp::Unsubscribe {
             id: 1.into(),
-            max_messages: Some(NonZeroU64::new(5).unwrap()),
+            max_messages: Some(NonZero::new(5).unwrap()),
         });
         assert_eq!(11, encoder.remaining());
         assert!(encoder.has_remaining());

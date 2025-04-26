@@ -83,7 +83,7 @@ mod nullable_number {
 }
 
 mod option_nonzero {
-    use std::num::NonZeroU32;
+    use std::num::NonZero;
 
     use serde::{Deserialize, Deserializer, Serialize, Serializer, de::DeserializeOwned};
 
@@ -91,7 +91,7 @@ mod option_nonzero {
         type Inner: Copy + Default + From<Self> + TryInto<Self> + Serialize + DeserializeOwned;
     }
 
-    impl NonZeroNumber for NonZeroU32 {
+    impl NonZeroNumber for NonZero<u32> {
         type Inner = u32;
     }
 

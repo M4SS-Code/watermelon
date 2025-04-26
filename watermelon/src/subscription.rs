@@ -1,5 +1,5 @@
 use std::{
-    num::NonZeroU64,
+    num::NonZero,
     pin::Pin,
     task::{Context, Poll},
 };
@@ -103,7 +103,10 @@ impl Subscription {
     /// # Errors
     ///
     /// It returns an error if the client is closed.
-    pub async fn close_after(&mut self, max_messages: NonZeroU64) -> Result<(), ClientClosedError> {
+    pub async fn close_after(
+        &mut self,
+        max_messages: NonZero<u64>,
+    ) -> Result<(), ClientClosedError> {
         match (self.status, self.receiver.is_closed()) {
             (SubscriptionStatus::Subscribed, true) => {
                 self.status = SubscriptionStatus::Unsubscribed;

@@ -1,9 +1,6 @@
-use std::{fmt::Write, num::NonZeroU64, process::abort, sync::Arc, time::Duration};
 #[cfg(test)]
-use std::{
-    net::{IpAddr, Ipv4Addr},
-    num::{NonZeroU16, NonZeroU32},
-};
+use std::net::{IpAddr, Ipv4Addr};
+use std::{fmt::Write, num::NonZero, process::abort, sync::Arc, time::Duration};
 
 use arc_swap::ArcSwap;
 use bytes::Bytes;
@@ -182,9 +179,9 @@ impl Client {
             version: "2.10.17".to_owned(),
             go_version: "1.22.5".to_owned(),
             host: IpAddr::V4(Ipv4Addr::LOCALHOST),
-            port: NonZeroU16::new(4222).unwrap(),
+            port: NonZero::new(4222).unwrap(),
             supports_headers: true,
-            max_payload: NonZeroU32::new(1024 * 1024).unwrap(),
+            max_payload: NonZero::new(1024 * 1024).unwrap(),
             protocol_version: 2,
             client_id: Some(1),
             auth_required: false,
@@ -426,13 +423,13 @@ impl Client {
     pub(crate) async fn unsubscribe(
         &self,
         id: SubscriptionId,
-        max_messages: Option<NonZeroU64>,
+        max_messages: Option<NonZero<u64>>,
     ) -> Result<(), ClientClosedError> {
         self.enqueue_command(HandlerCommand::Unsubscribe { id, max_messages })
             .await
     }
 
-    pub(crate) fn lazy_unsubscribe(&self, id: SubscriptionId, max_messages: Option<NonZeroU64>) {
+    pub(crate) fn lazy_unsubscribe(&self, id: SubscriptionId, max_messages: Option<NonZero<u64>>) {
         if self
             .try_enqueue_command(HandlerCommand::Unsubscribe { id, max_messages })
             .is_ok()

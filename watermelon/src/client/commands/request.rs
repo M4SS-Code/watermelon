@@ -1,7 +1,7 @@
 use std::{
     fmt::{self, Debug},
     future::{Future, IntoFuture},
-    num::NonZeroU64,
+    num::NonZero,
     pin::Pin,
     task::{Context, Poll},
     time::Duration,
@@ -331,7 +331,7 @@ impl Future for ResponseFut {
 fn try_request(client: &Client, request: Request) -> Result<ResponseFut, TryCommandError> {
     let subscription = if let Some(reply_subject) = &request.publish.reply_subject {
         let subscription = client.try_subscribe(reply_subject.clone(), None)?;
-        client.lazy_unsubscribe(subscription.id, Some(NonZeroU64::new(1).unwrap()));
+        client.lazy_unsubscribe(subscription.id, Some(NonZero::new(1).unwrap()));
 
         request.publish.client(client).try_publish()?;
         ResponseSubscription::Subscription(subscription)
@@ -358,7 +358,7 @@ fn try_request(client: &Client, request: Request) -> Result<ResponseFut, TryComm
 async fn request(client: &Client, request: Request) -> Result<ResponseFut, ClientClosedError> {
     let subscription = if let Some(reply_subject) = &request.publish.reply_subject {
         let subscription = client.subscribe(reply_subject.clone(), None).await?;
-        client.lazy_unsubscribe(subscription.id, Some(NonZeroU64::new(1).unwrap()));
+        client.lazy_unsubscribe(subscription.id, Some(NonZero::new(1).unwrap()));
 
         request.publish.client(client).await?;
         ResponseSubscription::Subscription(subscription)

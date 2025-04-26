@@ -1,5 +1,5 @@
 use alloc::boxed::Box;
-use core::num::NonZeroU64;
+use core::num::NonZero;
 
 use crate::{
     Subject, connect::Connect, message::MessageBase, queue_group::QueueGroup,
@@ -21,7 +21,7 @@ pub enum ClientOp {
     },
     Unsubscribe {
         id: SubscriptionId,
-        max_messages: Option<NonZeroU64>,
+        max_messages: Option<NonZero<u64>>,
     },
     Ping,
     Pong,

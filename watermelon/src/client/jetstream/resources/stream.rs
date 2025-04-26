@@ -1,4 +1,4 @@
-use std::{num::NonZeroU32, time::Duration};
+use std::{num::NonZero, time::Duration};
 
 use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
@@ -53,7 +53,7 @@ pub struct StreamConfig {
     pub discard_policy: DiscardPolicy,
     pub storage: Storage,
     #[serde(rename = "num_replicas")]
-    pub replicas: NonZeroU32,
+    pub replicas: NonZero<u32>,
     #[serde(with = "duration")]
     pub duplicate_window: Duration,
     #[serde(with = "compression")]

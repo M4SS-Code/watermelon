@@ -1,8 +1,4 @@
-use std::{
-    collections::BTreeMap,
-    num::{NonZeroU32, NonZeroU64},
-    time::Duration,
-};
+use std::{collections::BTreeMap, num::NonZero, time::Duration};
 
 use jiff::Timestamp;
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
@@ -31,14 +27,14 @@ pub struct ConsumerConfig {
     pub backoff: Vec<Duration>,
     pub filter_subjects: Vec<Subject>,
     pub replay_policy: ReplayPolicy,
-    pub rate_limit: Option<NonZeroU64>,
+    pub rate_limit: Option<NonZero<u64>>,
     pub headers_only: bool,
 
     pub specs: ConsumerSpecificConfig,
 
     // Inactivity threshold.
     pub inactive_threshold: Duration,
-    pub replicas: Option<NonZeroU32>,
+    pub replicas: Option<NonZero<u32>>,
     pub storage: ConsumerStorage,
     pub metadata: BTreeMap<String, String>,
 }
@@ -164,7 +160,7 @@ struct RawConsumerConfig {
     replay_policy: ReplayPolicy,
 
     #[serde(rename = "rate_limit_bps", skip_serializing_if = "Option::is_none")]
-    rate_limit: Option<NonZeroU64>,
+    rate_limit: Option<NonZero<u64>>,
     #[serde(default, skip_serializing_if = "is_false")]
     flow_control: bool,
     #[serde(default, skip_serializing_if = "Duration::is_zero", with = "duration")]
@@ -196,7 +192,7 @@ struct RawConsumerConfig {
     #[serde(default, with = "duration")]
     inactive_threshold: Duration,
     #[serde(rename = "num_replicas", with = "option_nonzero")]
-    replicas: Option<NonZeroU32>,
+    replicas: Option<NonZero<u32>>,
     #[serde(default, rename = "mem_storage")]
     storage: ConsumerStorage,
     #[serde(default)]

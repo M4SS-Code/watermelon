@@ -1,8 +1,5 @@
 use alloc::{string::String, vec::Vec};
-use core::{
-    net::IpAddr,
-    num::{NonZeroU16, NonZeroU32},
-};
+use core::{net::IpAddr, num::NonZero};
 
 use serde::Deserialize;
 
@@ -19,10 +16,10 @@ pub struct ServerInfo {
     #[serde(rename = "go")]
     pub go_version: String,
     pub host: IpAddr,
-    pub port: NonZeroU16,
+    pub port: NonZero<u16>,
     #[serde(rename = "headers")]
     pub supports_headers: bool,
-    pub max_payload: NonZeroU32,
+    pub max_payload: NonZero<u32>,
     #[serde(rename = "proto")]
     pub protocol_version: u32,
     #[serde(default)]

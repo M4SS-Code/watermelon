@@ -2,7 +2,7 @@ use std::{
     collections::{BTreeMap, VecDeque},
     future::Future,
     mem,
-    num::NonZeroU64,
+    num::NonZero,
     ops::ControlFlow,
     pin::Pin,
     sync::Arc,
@@ -89,7 +89,7 @@ struct Subscription {
     subject: Subject,
     queue_group: Option<QueueGroup>,
     messages: mpsc::Sender<Result<ServerMessage, ServerError>>,
-    remaining: Option<NonZeroU64>,
+    remaining: Option<NonZero<u64>>,
     failed_subscribe: bool,
 }
 
@@ -116,7 +116,7 @@ pub(crate) enum HandlerCommand {
     },
     Unsubscribe {
         id: SubscriptionId,
-        max_messages: Option<NonZeroU64>,
+        max_messages: Option<NonZero<u64>>,
     },
     Close(oneshot::Sender<()>),
 }
@@ -276,7 +276,7 @@ impl Handler {
                     }
 
                     if let Some(remaining) = &mut subscription.remaining {
-                        match NonZeroU64::new(remaining.get() - 1) {
+                        match NonZero::new(remaining.get() - 1) {
                             Some(new_remaining) => *remaining = new_remaining,
                             None => {
                                 self.subscriptions.remove(&subscription_id);

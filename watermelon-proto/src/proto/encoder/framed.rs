@@ -39,7 +39,7 @@ impl Default for FramedEncoder {
 
 #[cfg(test)]
 mod tests {
-    use core::num::NonZeroU64;
+    use core::num::NonZero;
 
     use bytes::Bytes;
 
@@ -120,7 +120,7 @@ mod tests {
             encoder
                 .encode(&ClientOp::Unsubscribe {
                     id: 1.into(),
-                    max_messages: Some(NonZeroU64::new(5).unwrap()),
+                    max_messages: Some(NonZero::new(5).unwrap()),
                 })
                 .to_bytes(),
             "UNSUB 1 5\r\n".as_bytes()
