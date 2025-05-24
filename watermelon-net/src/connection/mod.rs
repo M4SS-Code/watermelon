@@ -23,6 +23,7 @@ mod streaming;
 mod websocket;
 
 #[derive(Debug)]
+#[expect(clippy::large_enum_variant)]
 pub enum Connection<S1, S2> {
     Streaming(StreamingConnection<S1>),
     Websocket(WebsocketConnection<S2>),

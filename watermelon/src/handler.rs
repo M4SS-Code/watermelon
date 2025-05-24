@@ -427,7 +427,7 @@ impl Future for Handler {
             match this.conn.poll_read_next(cx) {
                 Poll::Pending => break,
                 Poll::Ready(Ok(server_op)) => {
-                    this.handle_server_op(server_op);
+                    let _ = this.handle_server_op(server_op);
                     handled_server_op = true;
                 }
                 Poll::Ready(Err(_err)) => return Poll::Ready(HandlerOutput::Disconnected),
