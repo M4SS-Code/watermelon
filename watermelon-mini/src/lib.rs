@@ -73,7 +73,9 @@ pub async fn easy_connect(
             .with_protocol_versions(&[&TLS13])
             .unwrap()
             .dangerous()
-            .with_custom_certificate_verifier(Arc::new(Verifier::new().with_provider(provider)))
+            .with_custom_certificate_verifier(Arc::new(
+                Verifier::new(provider).map_err(ConnectError::Tls)?,
+            ))
             .with_no_client_auth(),
     ));
 

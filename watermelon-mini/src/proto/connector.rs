@@ -3,7 +3,10 @@ use std::io;
 use tokio::net::TcpStream;
 use tokio_rustls::{
     TlsConnector,
-    rustls::pki_types::{InvalidDnsNameError, ServerName},
+    rustls::{
+        self,
+        pki_types::{InvalidDnsNameError, ServerName},
+    },
 };
 use watermelon_net::{
     Connection, StreamingConnection, connect_tcp,
@@ -30,6 +33,8 @@ use super::{
 pub enum ConnectError {
     #[error("io error")]
     Io(#[source] io::Error),
+    #[error("TLS error")]
+    Tls(rustls::Error),
     #[error("invalid DNS name")]
     InvalidDnsName(#[source] InvalidDnsNameError),
     #[error("websocket not supported")]
