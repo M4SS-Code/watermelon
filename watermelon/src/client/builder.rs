@@ -198,12 +198,6 @@ impl ClientBuilder {
     pub async fn connect(self, addr: ServerAddr) -> Result<Client, ConnectError> {
         Client::connect(addr, self).await
     }
-
-    #[must_use]
-    #[deprecated(since = "0.2.2", note = "renamed to `write_delay`")]
-    pub fn flush_interval(self, flush_interval: Duration) -> Self {
-        self.write_delay(flush_interval)
-    }
 }
 
 impl Default for ClientBuilder {
