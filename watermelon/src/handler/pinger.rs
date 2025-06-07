@@ -67,3 +67,84 @@ impl Pinger {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::{
+        task::{Context, Waker},
+        time::Duration,
+    };
+
+    use claims::assert_matches;
+    use tokio::time::advance;
+
+    use crate::handler::PingOutcome;
+
+    use super::Pinger;
+
+    #[tokio::test(start_paused = true)]
+    async fn e2e_ping() {
+        let mut cx = Context::from_waker(Waker::noop());
+
+        let mut pinger = Pinger::new();
+
+        // does nothing initially
+        assert_matches!(pinger.poll(&mut cx, || unreachable!()), PingOutcome::Ok);
+        assert_eq!(0, pinger.pending_pings);
+
+        // pings
+        advance(Duration::from_secs(10)).await;
+        let mut has_pinged = false;
+        assert_matches!(
+            pinger.poll(&mut cx, || { has_pinged = true }),
+            PingOutcome::Ok
+        );
+        assert!(has_pinged);
+        assert_eq!(1, pinger.pending_pings);
+
+        // does nothing again
+        assert_matches!(pinger.poll(&mut cx, || unreachable!()), PingOutcome::Ok);
+        assert_eq!(1, pinger.pending_pings);
+
+        // pings again
+        advance(Duration::from_secs(10)).await;
+        let mut has_pinged = false;
+        assert_matches!(
+            pinger.poll(&mut cx, || { has_pinged = true }),
+            PingOutcome::Ok
+        );
+        assert!(has_pinged);
+        assert_eq!(2, pinger.pending_pings);
+
+        // receive PONG
+        pinger.handle_pong();
+        assert_eq!(1, pinger.pending_pings);
+
+        // let some time go by and reset
+        advance(Duration::from_secs(5)).await;
+        pinger.reset();
+
+        // make sure we don't ping again given that not enough time has elapsed
+        // since the reset
+        advance(Duration::from_secs(5)).await;
+        assert_matches!(pinger.poll(&mut cx, || unreachable!()), PingOutcome::Ok);
+        assert_eq!(1, pinger.pending_pings);
+
+        // pings again
+        advance(Duration::from_secs(5)).await;
+        let mut has_pinged = false;
+        assert_matches!(
+            pinger.poll(&mut cx, || { has_pinged = true }),
+            PingOutcome::Ok
+        );
+        assert!(has_pinged);
+        assert_eq!(2, pinger.pending_pings);
+
+        // reaches too many in flight pings
+        advance(Duration::from_secs(10)).await;
+        assert_matches!(
+            pinger.poll(&mut cx, || unreachable!()),
+            PingOutcome::TooManyInFlightPings
+        );
+    }
+}
