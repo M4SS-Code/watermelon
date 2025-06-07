@@ -71,3 +71,43 @@ impl Delayed {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::{
+        future,
+        task::{Context, Waker},
+        time::Duration,
+    };
+
+    use claims::assert_ready;
+    use tokio::time::{Instant, sleep};
+
+    use super::Delayed;
+
+    #[test]
+    fn zero_interval_always_ready() {
+        let mut delayed = Delayed::new(Duration::ZERO);
+
+        for _ in 0..100 {
+            let mut cx = Context::from_waker(Waker::noop());
+            assert_ready!(delayed.poll_can_proceed(&mut cx));
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn delay_behaviour() {
+        const INTERVAL: Duration = Duration::from_millis(250);
+
+        let mut delayed = Delayed::new(INTERVAL);
+        let before = Instant::now();
+        future::poll_fn(|cx| delayed.poll_can_proceed(cx)).await;
+        assert_eq!(before.elapsed(), INTERVAL);
+
+        sleep(INTERVAL * 3).await;
+
+        let before = Instant::now();
+        future::poll_fn(|cx| delayed.poll_can_proceed(cx)).await;
+        assert_eq!(before.elapsed(), INTERVAL);
+    }
+}
