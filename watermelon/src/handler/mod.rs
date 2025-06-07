@@ -18,6 +18,7 @@ use tokio::{
         mpsc::{self, error::TrySendError},
         oneshot,
     },
+    task::coop,
 };
 use watermelon_mini::{
     ConnectError, ConnectFlags, ConnectionCompression, ConnectionSecurity, easy_connect,
@@ -446,13 +447,18 @@ impl Future for Handler {
                             this.writing = true;
                         }
 
-                        if this.writing {
+                        if this.writing && coop::has_budget_remaining() {
                             match streaming.poll_write_next(cx) {
-                                Poll::Pending => {
+                                Poll::Pending if coop::has_budget_remaining() => {
                                     // There's no point in flushing. The underlying
                                     // `AsyncWrite` implementation already flushes
                                     // when full.
                                     this.flushing = false;
+                                }
+                                Poll::Pending => {
+                                    // The tokio coop scheduler injected this `Poll::Pending`,
+                                    // so it'd be wrong to interpret this as the writer
+                                    // being blocked and stopping flushes from happening.
                                 }
                                 Poll::Ready(Ok(_n)) => {
                                     // Iterate again to register the waker and to try encoding
