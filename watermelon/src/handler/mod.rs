@@ -407,7 +407,7 @@ impl Future for Handler {
             this.failed_unsubscribe();
         }
 
-        if !this.shutdown_recv.poll_recv(cx).is_ready() {
+        if this.shutdown_recv.poll_recv(cx).is_ready() {
             this.begin_shutdown();
         }
 
