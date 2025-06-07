@@ -8,6 +8,10 @@ use std::{
 
 use tokio::time::{Instant, Sleep, sleep};
 
+/// A delay mechanism that enforces a minimum duration between operations.
+///
+/// `Delayed` ensures that successive calls to `poll_can_proceed` are separated
+/// by at least the specified duration.
 #[derive(Debug)]
 pub(super) struct Delayed {
     inner: Option<DelayedInner>,
@@ -22,6 +26,10 @@ struct DelayedInner {
 }
 
 impl Delayed {
+    /// Create a new `Delayed` with the specified duration.
+    ///
+    /// If `duration` is zero, the delay is effectively disabled and all
+    /// calls to `poll_can_proceed` will return `Poll::Ready(())` immediately.
     pub(super) fn new(duration: Duration) -> Self {
         let inner = if duration.is_zero() {
             None
@@ -36,6 +44,16 @@ impl Delayed {
         Self { inner }
     }
 
+    /// Poll whether the operation can proceed based on the configured delay.
+    ///
+    /// This method implements a rate-limiting mechanism:
+    ///
+    /// - On first call or after a delay has elapsed, returns `Poll::Pending`
+    /// - If called again before the delay duration has passed, returns `Poll::Pending`
+    /// - Automatically resets the delay timer when the delay is polled again *after* it
+    ///   has previously completed.
+    ///
+    /// When configured with [`Duration::ZERO`], this method always returns `Poll::Ready(())`.
     pub(super) fn poll_can_proceed(&mut self, cx: &mut Context<'_>) -> Poll<()> {
         if let Some(inner) = &mut self.inner {
             if mem::take(&mut inner.delay_consumed) {
