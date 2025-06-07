@@ -32,8 +32,11 @@ use watermelon_proto::{
     proto::{ClientOp, ServerOp},
 };
 
+use self::delayed::Delayed;
 use crate::client::{QuickInfo, RawQuickInfo, create_inbox_subject};
 use crate::core::{ClientBuilder, Echo};
+
+mod delayed;
 
 pub(crate) const MULTIPLEXED_SUBSCRIPTION_ID: SubscriptionId = SubscriptionId::MIN;
 const PING_INTERVAL: Duration = Duration::from_secs(10);
@@ -47,7 +50,7 @@ pub(crate) struct Handler {
     >,
     info: Arc<ArcSwap<ServerInfo>>,
     quick_info: Arc<RawQuickInfo>,
-    delayed_writer: Option<DelayedWriter>,
+    delayed_write: Delayed,
     writing: bool,
     flushing: bool,
     shutting_down: bool,
@@ -64,14 +67,6 @@ pub(crate) struct Handler {
     subscriptions: BTreeMap<SubscriptionId, Subscription>,
 
     shutdown_recv: mpsc::Receiver<()>,
-}
-
-#[derive(Debug)]
-struct DelayedWriter {
-    // INVARIANT: `duration != Duration::ZERO`
-    duration: Duration,
-    delay: Pin<Box<Sleep>>,
-    delay_consumed: bool,
 }
 
 #[derive(Debug)]
@@ -193,21 +188,13 @@ impl Handler {
             }
         }
 
-        let delayed_writer = if builder.write_delay.is_zero() {
-            None
-        } else {
-            Some(DelayedWriter {
-                duration: builder.write_delay,
-                delay: Box::pin(time::sleep(builder.write_delay)),
-                delay_consumed: true,
-            })
-        };
+        let delayed_write = Delayed::new(builder.write_delay);
 
         Ok(Some(Self {
             conn,
             info: Arc::new(ArcSwap::new(Arc::from(info))),
             quick_info: recycle.quick_info,
-            delayed_writer,
+            delayed_write,
             writing: false,
             flushing: false,
             shutting_down: false,
@@ -472,8 +459,7 @@ impl Future for Handler {
                 Connection::Streaming(streaming) => {
                     if streaming.may_write() {
                         if !this.writing
-                            && (this.flushing
-                                || DelayedWriter::can_proceed(&mut this.delayed_writer, cx))
+                            && (this.flushing || this.delayed_write.poll_can_proceed(cx).is_ready())
                         {
                             // We weren't writing, but we were either flushing (so going
                             // back to writing is kind of free) or we're allowed to start
@@ -510,7 +496,7 @@ impl Future for Handler {
                 Connection::Websocket(websocket) => {
                     if websocket.should_flush()
                         && !this.flushing
-                        && DelayedWriter::can_proceed(&mut this.delayed_writer, cx)
+                        && this.delayed_write.poll_can_proceed(cx).is_ready()
                     {
                         this.flushing = true;
                     }
@@ -677,28 +663,6 @@ impl Handler {
         }
 
         ReceiveOutcome::NoMoreSpace
-    }
-}
-
-impl DelayedWriter {
-    fn can_proceed(this: &mut Option<Self>, cx: &mut Context<'_>) -> bool {
-        if let Some(delayed_writer) = this {
-            if mem::take(&mut delayed_writer.delay_consumed) {
-                delayed_writer
-                    .delay
-                    .as_mut()
-                    .reset(Instant::now() + delayed_writer.duration);
-            }
-
-            if delayed_writer.delay.as_mut().poll(cx).is_ready() {
-                delayed_writer.delay_consumed = true;
-                true
-            } else {
-                false
-            }
-        } else {
-            true
-        }
     }
 }
 
