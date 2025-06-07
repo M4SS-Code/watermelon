@@ -49,7 +49,7 @@ impl HeaderMap {
     pub fn get_all<'a>(
         &'a self,
         name: &HeaderName,
-    ) -> impl DoubleEndedIterator<Item = &'a HeaderValue> {
+    ) -> impl DoubleEndedIterator<Item = &'a HeaderValue> + use<'a> {
         self.headers.get(name).unwrap_or(&EMPTY_HEADERS).iter()
     }
 

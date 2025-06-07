@@ -27,7 +27,7 @@ impl StreamDecoder {
     }
 
     #[must_use]
-    pub fn read_buf(&mut self) -> &mut impl BufMut {
+    pub fn read_buf(&mut self) -> &mut (impl BufMut + use<>) {
         &mut self.read_buf
     }
 

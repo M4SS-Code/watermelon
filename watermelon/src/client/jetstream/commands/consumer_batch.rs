@@ -43,7 +43,7 @@ impl ConsumerBatch {
         client: JetstreamClient,
         expires: Duration,
         max_msgs: usize,
-    ) -> impl Future<Output = Result<Self, JetstreamError2>> {
+    ) -> impl Future<Output = Result<Self, JetstreamError2>> + use<> {
         let subject = format!(
             "{}.CONSUMER.MSG.NEXT.{}.{}",
             client.prefix, consumer.stream_name, consumer.config.name
