@@ -7,7 +7,6 @@ use std::{
     pin::Pin,
     sync::Arc,
     task::{Context, Poll},
-    time::Duration,
 };
 
 use arc_swap::ArcSwap;
@@ -19,7 +18,6 @@ use tokio::{
         mpsc::{self, error::TrySendError},
         oneshot,
     },
-    time::{self, Instant, Sleep},
 };
 use watermelon_mini::{
     ConnectError, ConnectFlags, ConnectionCompression, ConnectionSecurity, easy_connect,
@@ -32,14 +30,17 @@ use watermelon_proto::{
     proto::{ClientOp, ServerOp},
 };
 
-use self::delayed::Delayed;
-use crate::client::{QuickInfo, RawQuickInfo, create_inbox_subject};
+use self::{delayed::Delayed, pinger::Pinger};
 use crate::core::{ClientBuilder, Echo};
+use crate::{
+    client::{QuickInfo, RawQuickInfo, create_inbox_subject},
+    handler::pinger::PingOutcome,
+};
 
 mod delayed;
+mod pinger;
 
 pub(crate) const MULTIPLEXED_SUBSCRIPTION_ID: SubscriptionId = SubscriptionId::MIN;
-const PING_INTERVAL: Duration = Duration::from_secs(10);
 const RECV_BUF: usize = 16;
 
 #[derive(Debug)]
@@ -55,8 +56,7 @@ pub(crate) struct Handler {
     flushing: bool,
     shutting_down: bool,
 
-    ping_interval: Pin<Box<Sleep>>,
-    pending_pings: u8,
+    pinger: Pinger,
 
     commands: mpsc::Receiver<HandlerCommand>,
     recv_buf: Vec<HandlerCommand>,
@@ -198,8 +198,7 @@ impl Handler {
             writing: false,
             flushing: false,
             shutting_down: false,
-            ping_interval: Box::pin(time::sleep(PING_INTERVAL)),
-            pending_pings: 0,
+            pinger: Pinger::new(),
             commands: recycle.commands,
             recv_buf: Vec::with_capacity(RECV_BUF),
             in_flight_commands,
@@ -326,7 +325,7 @@ impl Handler {
                 self.conn.enqueue_write_op(&ClientOp::Pong);
             }
             ServerOp::Pong => {
-                self.pending_pings = self.pending_pings.saturating_sub(1);
+                self.pinger.handle_pong();
             }
             ServerOp::Info { info } => {
                 self.quick_info.store_is_lameduck(info.lame_duck_mode);
@@ -335,24 +334,6 @@ impl Handler {
         }
 
         ControlFlow::Continue(())
-    }
-
-    #[cold]
-    fn ping(&mut self, cx: &mut Context<'_>) -> Result<(), HandlerOutput> {
-        if self.pending_pings < 2 {
-            loop {
-                self.reset_ping_interval();
-                if Pin::new(&mut self.ping_interval).poll(cx).is_pending() {
-                    break;
-                }
-            }
-
-            self.conn.enqueue_write_op(&ClientOp::Ping);
-            self.pending_pings += 1;
-            Ok(())
-        } else {
-            Err(HandlerOutput::Disconnected)
-        }
     }
 
     #[cold]
@@ -406,10 +387,6 @@ impl Handler {
         self.shutting_down = true;
         self.commands.close();
     }
-
-    fn reset_ping_interval(&mut self) {
-        Sleep::reset(self.ping_interval.as_mut(), Instant::now() + PING_INTERVAL);
-    }
 }
 
 impl Future for Handler {
@@ -417,10 +394,12 @@ impl Future for Handler {
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.get_mut();
-        if Pin::new(&mut this.ping_interval).poll(cx).is_ready() {
-            if let Err(output) = this.ping(cx) {
-                return Poll::Ready(output);
-            }
+        let ping_outcome = this.pinger.poll(cx, || {
+            this.conn.enqueue_write_op(&ClientOp::Ping);
+        });
+        match ping_outcome {
+            PingOutcome::Ok => {}
+            PingOutcome::TooManyInFlightPings => return Poll::Ready(HandlerOutput::Disconnected),
         }
 
         if this.quick_info.get().is_failed_unsubscribe {
@@ -443,7 +422,7 @@ impl Future for Handler {
             }
         }
         if handled_server_op {
-            this.reset_ping_interval();
+            this.pinger.reset();
         }
 
         let mut iterate_again = true;
