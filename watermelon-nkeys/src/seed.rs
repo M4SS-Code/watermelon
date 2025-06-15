@@ -1,16 +1,10 @@
 use std::fmt::{self, Display};
 
 #[cfg(feature = "aws-lc-rs")]
-use aws_lc_rs::{
-    self as crypto_provider,
-    signature::{Ed25519KeyPair, KeyPair as _},
-};
+use aws_lc_rs::signature::{Ed25519KeyPair, KeyPair as _, Signature as LlSignature};
 use data_encoding::{BASE32_NOPAD, BASE64URL_NOPAD};
 #[cfg(all(not(feature = "aws-lc-rs"), feature = "ring"))]
-use ring::{
-    self as crypto_provider,
-    signature::{Ed25519KeyPair, KeyPair as _},
-};
+use ring::signature::{Ed25519KeyPair, KeyPair as _, Signature as LlSignature};
 
 #[cfg(not(any(feature = "aws-lc-rs", feature = "ring")))]
 compile_error!("Please enable the `aws-lc-rs` or the `ring` feature");
@@ -56,7 +50,7 @@ pub enum KeyPairFromSeedError {
 /// A payload signed via a [`KeyPair`].
 ///
 /// Obtained from [`KeyPair::sign`].
-pub struct Signature(crypto_provider::signature::Signature);
+pub struct Signature(LlSignature);
 
 impl KeyPair {
     /// Decode a key from an `NKey` seed.
