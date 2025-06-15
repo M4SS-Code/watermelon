@@ -252,7 +252,7 @@ impl Client {
     /// Consider calling [`Publish::client`] instead if you already have
     /// a [`Publish`] instance.
     #[must_use]
-    pub fn publish(&self, subject: Subject) -> ClientPublish {
+    pub fn publish(&self, subject: Subject) -> ClientPublish<'_> {
         ClientPublish::build(self, subject)
     }
 
@@ -261,7 +261,7 @@ impl Client {
     /// Consider calling [`Request::client`] instead if you already have
     /// a [`Request`] instance.
     #[must_use]
-    pub fn request(&self, subject: Subject) -> ClientRequest {
+    pub fn request(&self, subject: Subject) -> ClientRequest<'_> {
         ClientRequest::build(self, subject)
     }
 
