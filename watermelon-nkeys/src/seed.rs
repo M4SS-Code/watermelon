@@ -1,4 +1,4 @@
-use std::fmt::{self, Display};
+use std::fmt::{self, Debug, Display};
 
 #[cfg(feature = "aws-lc-rs")]
 use aws_lc_rs::signature::{Ed25519KeyPair, KeyPair as _, Signature as LlSignature};
@@ -14,7 +14,6 @@ use crate::crc::Crc16;
 const SEED_PREFIX_BYTE: u8 = 18 << 3;
 
 /// A `NKey` private/public key pair.
-#[derive(Debug)]
 pub struct KeyPair {
     kind: u8,
     key: Ed25519KeyPair,
@@ -106,6 +105,14 @@ impl KeyPair {
     #[must_use]
     pub fn sign(&self, buf: &[u8]) -> Signature {
         Signature(self.key.sign(buf))
+    }
+}
+
+impl Debug for KeyPair {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("KeyPair")
+            .field("kind", &self.kind)
+            .finish_non_exhaustive()
     }
 }
 
