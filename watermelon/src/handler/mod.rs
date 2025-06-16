@@ -430,9 +430,10 @@ impl Future for Handler {
             this.pinger.reset();
         }
 
+        let mut receive_outcome = ReceiveOutcome::NoMoreCommands;
         let mut iterate_again = true;
         while mem::take(&mut iterate_again) {
-            let receive_outcome = this.receive_command(cx);
+            receive_outcome = this.receive_command(cx);
             if matches!(receive_outcome, ReceiveOutcome::NoMoreSpace) {
                 // We reached the soft limit on the write buffer so
                 // immediately start the write process.
@@ -505,7 +506,11 @@ impl Future for Handler {
             }
         }
 
-        if this.shutting_down {
+        if this.shutting_down
+            && matches!(receive_outcome, ReceiveOutcome::NoMoreCommands)
+            && !this.writing
+            && !this.flushing
+        {
             Poll::Ready(HandlerOutput::Closed)
         } else {
             Poll::Pending
