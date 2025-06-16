@@ -1,0 +1,18 @@
+[package]
+name = "watermelon-base-example"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+tokio = { version = "1.44", features = ["macros", "rt-multi-thread", "time", "signal"] }
+futures-util = { version = "0.3.31", default-features = false }
+watermelon = { path = "../../watermelon", version = "0.2" }
+bytes = "1.10.1"
+jiff = { version = "0.2.1", default-features = false, features = ["std", "tz-system", "tzdb-zoneinfo"] }
+
+[lints]
+workspace = true

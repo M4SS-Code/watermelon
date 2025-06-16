@@ -5,6 +5,7 @@ members = [
     "watermelon-net",
     "watermelon-proto",
     "watermelon-nkeys",
+    "examples/base",
 ]
 resolver = "2"
 
