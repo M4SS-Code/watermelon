@@ -65,6 +65,10 @@ const MAX_RECONNECT_DELAY: Duration = Duration::from_secs(60);
 /// `Client` is a `Clone`able handle to a NATS connection.
 /// If the connection is lost, the client will automatically reconnect and
 /// resume any currently open subscriptions.
+///
+/// Dropping all handles of `Client` will immediately kill the underlying
+/// TCP connection to the server and lose all in flight publishes.
+/// Use [`Client::close`] to gracefully shutdown the client.
 #[derive(Debug, Clone)]
 pub struct Client {
     inner: Arc<ClientInner>,
