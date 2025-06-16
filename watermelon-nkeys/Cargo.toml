@@ -1,6 +1,6 @@
 [package]
 name = "watermelon-nkeys"
-version = "0.1.2"
+version = "0.1.3"
 description = "Minimal NKeys implementation for NATS client authentication"
 categories = ["parser-implementations", "cryptography"]
 keywords = ["nats", "nkey"]
