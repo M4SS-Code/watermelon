@@ -400,15 +400,19 @@ impl Future for Handler {
         });
         match ping_outcome {
             PingOutcome::Ok => {}
-            PingOutcome::TooManyInFlightPings => return Poll::Ready(HandlerOutput::Disconnected),
+            PingOutcome::TooManyInFlightPings => {
+                return Poll::Ready(HandlerOutput::Disconnected);
+            }
         }
 
-        if this.quick_info.get().is_failed_unsubscribe {
-            this.failed_unsubscribe();
-        }
+        if !this.shutting_down {
+            if this.quick_info.get().is_failed_unsubscribe {
+                this.failed_unsubscribe();
+            }
 
-        if this.shutdown_recv.poll_recv(cx).is_ready() {
-            this.begin_shutdown();
+            if this.shutdown_recv.poll_recv(cx).is_ready() {
+                this.begin_shutdown();
+            }
         }
 
         let mut handled_server_op = false;
