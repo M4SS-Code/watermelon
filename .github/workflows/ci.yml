@@ -12,13 +12,13 @@ jobs:
       - uses: EmbarkStudios/cargo-deny-action@v2
 
   fmt:
-    name: rustfmt / 1.87.0
+    name: rustfmt / 1.88.0
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@1.87.0
+      - uses: dtolnay/rust-toolchain@1.88.0
         with:
           components: rustfmt
 
@@ -26,13 +26,13 @@ jobs:
         run: cargo fmt --all -- --check
 
   clippy:
-    name: clippy / 1.87.0
+    name: clippy / 1.88.0
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@1.87.0
+      - uses: dtolnay/rust-toolchain@1.88.0
         with:
           components: clippy
 
@@ -40,12 +40,12 @@ jobs:
         run: cargo clippy --all-features -- -D warnings
 
   cargo-hack:
-    name: cargo-hack / 1.87.0
+    name: cargo-hack / 1.88.0
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@1.87.0
+      - uses: dtolnay/rust-toolchain@1.88.0
 
       - uses: taiki-e/install-action@v2
         with:
