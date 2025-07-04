@@ -11,6 +11,7 @@ use std::{
 
 use arc_swap::ArcSwap;
 use bytes::Bytes;
+use thiserror::Error;
 use tokio::{
     net::TcpStream,
     select,
@@ -19,6 +20,7 @@ use tokio::{
         oneshot,
     },
     task::coop,
+    time::timeout,
 };
 use watermelon_mini::{
     ConnectError, ConnectFlags, ConnectionCompression, ConnectionSecurity, easy_connect,
@@ -81,6 +83,14 @@ pub(crate) struct RecycledHandler {
     shutdown_recv: mpsc::Receiver<()>,
 }
 
+#[derive(Debug, Error)]
+pub enum ConnectHandlerError {
+    #[error("connect error")]
+    Connect(#[source] ConnectError),
+    #[error("timed out while attempting to connect")]
+    TimedOut,
+}
+
 #[derive(Debug)]
 struct Subscription {
     subject: Subject,
@@ -136,7 +146,7 @@ impl Handler {
         addr: &ServerAddr,
         builder: &ClientBuilder,
         mut recycle: RecycledHandler,
-    ) -> Result<Option<Self>, (ConnectError, RecycledHandler)> {
+    ) -> Result<Option<Self>, (ConnectHandlerError, RecycledHandler)> {
         let mut flags = ConnectFlags::default();
         flags.echo = matches!(builder.echo, Echo::Allow);
         #[cfg(feature = "non-standard-zstd")]
@@ -149,10 +159,11 @@ impl Handler {
             () = recycle.wait_shutdown() => {
                 return Ok(None);
             },
-            connect_result = easy_connect(addr, builder.auth_method.as_ref(), flags) => {
+            connect_result = timeout(builder.connect_timeout, easy_connect(addr, builder.auth_method.as_ref(), flags)) => {
                 match connect_result {
-                    Ok(items) => items,
-                    Err(err) => return Err((err, recycle)),
+                    Ok(Ok(items)) => items,
+                    Ok(Err(err)) => return Err((ConnectHandlerError::Connect(err), recycle)),
+                    Err(_elapsed) => return Err((ConnectHandlerError::TimedOut, recycle)),
                 }
             }
         };

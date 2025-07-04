@@ -1,11 +1,11 @@
 use std::time::Duration;
 
-use watermelon_mini::{AuthenticationMethod, ConnectError};
+use watermelon_mini::AuthenticationMethod;
 use watermelon_proto::{ServerAddr, Subject};
 
 #[cfg(feature = "from-env")]
 use super::from_env::FromEnv;
-use crate::core::Client;
+use crate::{core::Client, handler::ConnectHandlerError};
 
 /// A builder for [`Client`]
 ///
@@ -13,6 +13,7 @@ use crate::core::Client;
 #[derive(Debug)]
 pub struct ClientBuilder {
     pub(crate) auth_method: Option<AuthenticationMethod>,
+    pub(crate) connect_timeout: Duration,
     pub(crate) write_delay: Duration,
     pub(crate) inbox_prefix: Subject,
     pub(crate) echo: Echo,
@@ -39,6 +40,7 @@ impl ClientBuilder {
     pub(super) fn new() -> Self {
         Self {
             auth_method: None,
+            connect_timeout: Duration::from_secs(30),
             write_delay: Duration::ZERO,
             inbox_prefix: Subject::from_static("_INBOX"),
             echo: Echo::Prevent,
@@ -106,6 +108,15 @@ impl ClientBuilder {
     #[must_use]
     pub fn authentication_method(mut self, auth_method: Option<AuthenticationMethod>) -> Self {
         self.auth_method = auth_method;
+        self
+    }
+
+    /// Define the timeout for TCP connect and handshake
+    ///
+    /// Default: 30 seconds
+    #[must_use]
+    pub fn connect_timeout(mut self, connect_timeout: Duration) -> Self {
+        self.connect_timeout = connect_timeout;
         self
     }
 
@@ -195,7 +206,7 @@ impl ClientBuilder {
     /// # Errors
     ///
     /// It returns an error if the connection fails.
-    pub async fn connect(self, addr: ServerAddr) -> Result<Client, ConnectError> {
+    pub async fn connect(self, addr: ServerAddr) -> Result<Client, ConnectHandlerError> {
         Client::connect(addr, self).await
     }
 }

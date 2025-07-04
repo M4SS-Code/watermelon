@@ -13,7 +13,6 @@ use tokio::{
     task::JoinHandle,
     time::sleep,
 };
-use watermelon_mini::ConnectError;
 #[cfg(test)]
 use watermelon_proto::NonStandardServerInfo;
 use watermelon_proto::{
@@ -40,7 +39,8 @@ use self::tests::TestHandler;
 use crate::{
     core::{MultiplexedSubscription, Subscription},
     handler::{
-        Handler, HandlerCommand, HandlerOutput, MULTIPLEXED_SUBSCRIPTION_ID, RecycledHandler,
+        ConnectHandlerError, Handler, HandlerCommand, HandlerOutput, MULTIPLEXED_SUBSCRIPTION_ID,
+        RecycledHandler,
     },
     util::atomic::{AtomicU64, Ordering},
 };
@@ -114,7 +114,7 @@ impl Client {
     pub(super) async fn connect(
         addr: ServerAddr,
         builder: ClientBuilder,
-    ) -> Result<Self, ConnectError> {
+    ) -> Result<Self, ConnectHandlerError> {
         let (sender, receiver) = mpsc::channel(CLIENT_OP_CHANNEL_SIZE);
 
         let (shutdown_sender, shutdown_receiver) = mpsc::channel(1);
