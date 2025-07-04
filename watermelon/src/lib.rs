@@ -40,6 +40,7 @@ pub mod core {
         //! NATS Core specific errors
 
         pub use crate::client::{ClientClosedError, ResponseError, TryCommandError};
+        pub use watermelon_mini::ConnectError;
     }
 }
 
