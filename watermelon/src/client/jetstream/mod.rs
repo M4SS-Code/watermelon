@@ -95,6 +95,35 @@ impl JetstreamClient {
         }
     }
 
+    /// Create a new stream
+    ///
+    /// # Errors
+    ///
+    /// It returns an error if the stream name produces an invalid subject or if an error occurs
+    /// while creating the stream.
+    pub async fn create_stream(&self, config: &StreamConfig) -> Result<Stream, JetstreamError2> {
+        let subject = format!("{}.STREAM.CREATE.{}", self.prefix, config.name)
+            .try_into()
+            .map_err(JetstreamError2::Subject)?;
+
+        let payload = serde_json::to_vec(config).map_err(JetstreamError2::Json)?;
+        let resp = self
+            .client
+            .request(subject)
+            .response_timeout(self.request_timeout)
+            .payload(payload.into())
+            .await
+            .map_err(JetstreamError2::ClientClosed)?;
+        let resp = resp.await.map_err(JetstreamError2::ResponseError)?;
+
+        let json = serde_json::from_slice::<Response<Stream>>(&resp.base.payload)
+            .map_err(JetstreamError2::Json)?;
+        match json {
+            Response::Response(stream) => Ok(stream),
+            Response::Error { error } => Err(JetstreamError2::Status(error)),
+        }
+    }
+
     /// List streams present within this client's Jetstream context
     pub fn streams(&self) -> Streams {
         Streams::new(self.clone())
