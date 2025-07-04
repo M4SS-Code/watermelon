@@ -14,6 +14,7 @@ pub use self::resources::{
     ConsumerStorage, DeliverPolicy, DiscardPolicy, ReplayPolicy, RetentionPolicy, Storage, Stream,
     StreamConfig, StreamState,
 };
+use crate::client::ClientRequest;
 use crate::core::Client;
 
 use super::{ClientClosedError, ResponseError};
@@ -108,9 +109,7 @@ impl JetstreamClient {
 
         let payload = serde_json::to_vec(config).map_err(JetstreamError2::Json)?;
         let resp = self
-            .client
-            .request(subject)
-            .response_timeout(self.request_timeout)
+            .make_request(subject)
             .payload(payload.into())
             .await
             .map_err(JetstreamError2::ClientClosed)?;
@@ -140,9 +139,7 @@ impl JetstreamClient {
             .try_into()
             .map_err(JetstreamError2::Subject)?;
         let resp = self
-            .client
-            .request(subject)
-            .response_timeout(self.request_timeout)
+            .make_request(subject)
             .payload(Bytes::new())
             .await
             .map_err(JetstreamError2::ClientClosed)?;
@@ -189,9 +186,7 @@ impl JetstreamClient {
         }))
         .map_err(JetstreamError2::Json)?;
         let resp = self
-            .client
-            .request(subject)
-            .response_timeout(self.request_timeout)
+            .make_request(subject)
             .payload(payload.into())
             .await
             .map_err(JetstreamError2::ClientClosed)?;
@@ -228,9 +223,7 @@ impl JetstreamClient {
         .try_into()
         .map_err(JetstreamError2::Subject)?;
         let resp = self
-            .client
-            .request(subject)
-            .response_timeout(self.request_timeout)
+            .make_request(subject)
             .payload(Bytes::new())
             .await
             .map_err(JetstreamError2::ClientClosed)?;
@@ -273,6 +266,12 @@ impl JetstreamClient {
 
     pub(crate) fn subject_for_request(&self, endpoint: &Subject) -> Subject {
         Subject::from_dangerous_value(format!("{}.{}", self.prefix, endpoint).into())
+    }
+
+    fn make_request(&self, subject: Subject) -> ClientRequest<'_> {
+        self.client
+            .request(subject)
+            .response_timeout(self.request_timeout)
     }
 
     /// Get a reference to the inner NATS Core client
