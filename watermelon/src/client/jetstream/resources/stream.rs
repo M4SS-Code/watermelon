@@ -2,6 +2,7 @@ use std::{num::NonZero, time::Duration};
 
 use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
+use watermelon_proto::Subject;
 
 use super::{compression, duration, nullable_datetime, nullable_number, opposite_bool};
 
@@ -36,7 +37,7 @@ pub struct StreamState {
 )]
 pub struct StreamConfig {
     pub name: String,
-    pub subjects: Vec<String>,
+    pub subjects: Vec<Subject>,
     #[serde(with = "nullable_number")]
     pub max_consumers: Option<u32>,
     #[serde(with = "nullable_number", rename = "max_msgs")]
