@@ -179,7 +179,7 @@ mod tests {
                 "SAAPN4W3EG6KCJGUQTKTJ5!#B5NHK5CHAJL4DBGFUM3HHROI4XUEP4OBK4"
             ),
             Err(KeyPairFromSeedError::InvalidBase32)
-        )
+        );
     }
 
     #[test]
@@ -189,7 +189,7 @@ mod tests {
                 "FAAPN4W3EG6KCJGUQTKTJ5GSB5NHK5CHAJL4DBGFUM3HHROI4XUEP4OBK4"
             ),
             Err(KeyPairFromSeedError::BadCrc)
-        )
+        );
     }
 
     #[test]
@@ -199,6 +199,6 @@ mod tests {
                 "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
             ),
             Err(KeyPairFromSeedError::InvalidPrefix)
-        )
+        );
     }
 }

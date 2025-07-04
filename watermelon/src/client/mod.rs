@@ -198,7 +198,7 @@ impl Client {
     pub(crate) fn test(client_to_handler_chan_size: usize) -> (Self, TestHandler) {
         let builder = Self::builder();
         let (sender, receiver) = mpsc::channel(client_to_handler_chan_size);
-        let (shutdown_sender, shutdown_receiver) = mpsc::channel(1);
+        let (shutdown_sender, _shutdown_receiver) = mpsc::channel(1);
         let info = Arc::new(ArcSwap::new(Arc::from(ServerInfo {
             id: "1234".to_owned(),
             name: "watermelon-test".to_owned(),
