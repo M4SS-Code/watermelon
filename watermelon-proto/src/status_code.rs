@@ -54,10 +54,7 @@ impl StatusCode {
     }
 
     const fn new_internal(val: u16) -> Self {
-        match NonZero::new(val) {
-            Some(val) => Self(val),
-            None => unreachable!(),
-        }
+        Self(NonZero::new(val).unwrap())
     }
 }
 
