@@ -31,6 +31,7 @@ pub struct ConnectFlags {
     pub zstd_compression_level: Option<u8>,
 }
 
+#[cfg_attr(not(feature = "non-standard-zstd"), expect(clippy::derivable_impls))]
 impl Default for ConnectFlags {
     fn default() -> Self {
         Self {

@@ -15,7 +15,7 @@ pub(crate) struct RawQuickInfo(AtomicU32);
 ///
 /// [`Client::quick_info`]: crate::core::Client::quick_info
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-#[expect(clippy::struct_excessive_bools)]
+#[cfg_attr(feature = "non-standard-zstd", expect(clippy::struct_excessive_bools))]
 pub struct QuickInfo {
     pub(crate) is_connected: bool,
     #[cfg(feature = "non-standard-zstd")]
