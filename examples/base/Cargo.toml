@@ -10,7 +10,7 @@ publish = false
 [dependencies]
 tokio = { version = "1.44", features = ["macros", "rt-multi-thread", "time", "signal"] }
 futures-util = { version = "0.3.31", default-features = false }
-watermelon = { path = "../../watermelon", version = "0.3" }
+watermelon = { path = "../../watermelon", version = "0.4" }
 bytes = "1.10.1"
 jiff = { version = "0.2.1", default-features = false, features = ["std", "tz-system", "tzdb-zoneinfo"] }
 

@@ -1,6 +1,6 @@
 [package]
 name = "watermelon"
-version = "0.3.0"
+version = "0.4.0"
 description = "High level actor based implementation NATS Core and NATS Jetstream client implementation"
 categories = ["api-bindings", "network-programming"]
 keywords = ["nats", "client", "jetstream"]
