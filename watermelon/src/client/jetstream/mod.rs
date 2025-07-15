@@ -38,7 +38,7 @@ pub struct JetstreamClient {
 /// A Jetstream API error
 #[derive(Debug, Deserialize, thiserror::Error)]
 #[error("jetstream error status={status} code={code} description={description}")]
-pub struct JetstreamError {
+pub struct JetstreamApiError {
     #[serde(rename = "code")]
     status: StatusCode,
     #[serde(rename = "err_code")]
@@ -63,7 +63,7 @@ pub enum JetstreamError2 {
     #[error("JSON deserialization")]
     Json(#[source] serde_json::Error),
     #[error("bad response code")]
-    Status(#[source] JetstreamError),
+    Status(#[source] JetstreamApiError),
 }
 
 impl JetstreamClient {

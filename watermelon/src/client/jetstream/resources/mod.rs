@@ -8,7 +8,7 @@ pub use self::stream::{
     Compression, DiscardPolicy, RetentionPolicy, Storage, Stream, StreamConfig, StreamState,
 };
 
-use super::JetstreamError;
+use super::JetstreamApiError;
 
 mod consumer;
 mod stream;
@@ -17,7 +17,7 @@ mod stream;
 #[serde(untagged)]
 pub(crate) enum Response<T> {
     Response(T),
-    Error { error: JetstreamError },
+    Error { error: JetstreamApiError },
 }
 
 mod nullable_number {
