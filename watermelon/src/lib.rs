@@ -63,7 +63,7 @@ pub mod jetstream {
         //! NATS Jetstream specific errors
 
         pub use crate::client::{
-            ConsumerStreamError, JetstreamApiError, JetstreamError2, JetstreamErrorCode,
+            ConsumerStreamError, JetstreamApiError, JetstreamError, JetstreamErrorCode,
         };
     }
 }

@@ -10,7 +10,7 @@ use pin_project_lite::pin_project;
 use watermelon_proto::ServerMessage;
 
 use crate::{
-    client::{Consumer, JetstreamClient, JetstreamError2},
+    client::{Consumer, JetstreamClient, JetstreamError},
     util::BoxFuture,
 };
 
@@ -36,7 +36,7 @@ pin_project! {
     #[project = ConsumerStreamStatusProj]
     enum ConsumerStreamStatus {
         Polling {
-            future: BoxFuture<'static, Result<ConsumerBatch, JetstreamError2>>,
+            future: BoxFuture<'static, Result<ConsumerBatch, JetstreamError>>,
         },
         RunningBatch {
             #[pin]
@@ -51,7 +51,7 @@ pub enum ConsumerStreamError {
     #[error("consumer batch error")]
     BatchError(#[source] ConsumerBatchError),
     #[error("jetstream error")]
-    Jetstream(#[source] JetstreamError2),
+    Jetstream(#[source] JetstreamError),
 }
 
 impl ConsumerStream {

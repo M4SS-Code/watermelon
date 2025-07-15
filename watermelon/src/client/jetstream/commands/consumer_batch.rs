@@ -11,7 +11,7 @@ use tokio::time::{Sleep, sleep};
 use watermelon_proto::{ServerMessage, StatusCode, error::ServerError};
 
 use crate::{
-    client::{Consumer, JetstreamClient, JetstreamError2},
+    client::{Consumer, JetstreamClient, JetstreamError},
     subscription::Subscription,
 };
 
@@ -43,7 +43,7 @@ impl ConsumerBatch {
         client: JetstreamClient,
         expires: Duration,
         max_msgs: usize,
-    ) -> impl Future<Output = Result<Self, JetstreamError2>> + use<> {
+    ) -> impl Future<Output = Result<Self, JetstreamError>> + use<> {
         let subject = format!(
             "{}.CONSUMER.MSG.NEXT.{}.{}",
             client.prefix, consumer.stream_name, consumer.config.name
@@ -51,7 +51,7 @@ impl ConsumerBatch {
         .try_into();
 
         async move {
-            let subject = subject.map_err(JetstreamError2::Subject)?;
+            let subject = subject.map_err(JetstreamError::Subject)?;
             let incoming_subject = client.client.create_inbox_subject();
             let payload = serde_json::to_vec(&if expires.is_zero() {
                 json!({
@@ -65,20 +65,20 @@ impl ConsumerBatch {
                     "no_wait": true
                 })
             })
-            .map_err(JetstreamError2::Json)?;
+            .map_err(JetstreamError::Json)?;
 
             let subscription = client
                 .client
                 .subscribe(incoming_subject.clone(), None)
                 .await
-                .map_err(JetstreamError2::ClientClosed)?;
+                .map_err(JetstreamError::ClientClosed)?;
             client
                 .client
                 .publish(subject)
                 .reply_subject(Some(incoming_subject.clone()))
                 .payload(payload.into())
                 .await
-                .map_err(JetstreamError2::ClientClosed)?;
+                .map_err(JetstreamError::ClientClosed)?;
 
             let timeout = sleep(expires.saturating_add(client.request_timeout));
             Ok(Self {

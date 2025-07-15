@@ -12,7 +12,7 @@ use serde_json::json;
 use watermelon_proto::Subject;
 
 use crate::{
-    client::{self, JetstreamClient, jetstream::JetstreamError2},
+    client::{self, JetstreamClient, jetstream::JetstreamError},
     util::BoxFuture,
 };
 
@@ -24,7 +24,7 @@ pub struct Consumers {
     client: JetstreamClient,
     offset: u32,
     partial_subject: Subject,
-    fetch: Option<BoxFuture<'static, Result<ConsumersResponse, JetstreamError2>>>,
+    fetch: Option<BoxFuture<'static, Result<ConsumersResponse, JetstreamError>>>,
     buffer: VecDeque<client::Consumer>,
     exhausted: bool,
 }
@@ -52,7 +52,7 @@ impl Consumers {
 }
 
 impl Stream for Consumers {
-    type Item = Result<client::Consumer, JetstreamError2>;
+    type Item = Result<client::Consumer, JetstreamError>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let this = self.get_mut();
@@ -83,10 +83,10 @@ impl Stream for Consumers {
                         .into(),
                     )
                     .await
-                    .map_err(JetstreamError2::ClientClosed)?;
-                let response = response_fut.await.map_err(JetstreamError2::ResponseError)?;
-                let payload = serde_json::from_slice(&response.base.payload)
-                    .map_err(JetstreamError2::Json)?;
+                    .map_err(JetstreamError::ClientClosed)?;
+                let response = response_fut.await.map_err(JetstreamError::ResponseError)?;
+                let payload =
+                    serde_json::from_slice(&response.base.payload).map_err(JetstreamError::Json)?;
                 Ok(payload)
             })
         });

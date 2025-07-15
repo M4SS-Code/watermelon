@@ -28,7 +28,7 @@ pub use self::commands::{
 pub use self::jetstream::{
     AckPolicy, Compression, Consumer, ConsumerBatch, ConsumerConfig, ConsumerDurability,
     ConsumerSpecificConfig, ConsumerStorage, ConsumerStream, ConsumerStreamError, Consumers,
-    DeliverPolicy, DiscardPolicy, JetstreamApiError, JetstreamClient, JetstreamError2,
+    DeliverPolicy, DiscardPolicy, JetstreamApiError, JetstreamClient, JetstreamError,
     JetstreamErrorCode, ReplayPolicy, RetentionPolicy, Storage, Stream, StreamConfig, StreamState,
     Streams,
 };

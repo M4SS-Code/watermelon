@@ -53,7 +53,7 @@ pub struct JetstreamErrorCode(u16);
 
 /// An error encountered while making a Jetstream request
 #[derive(Debug, thiserror::Error)]
-pub enum JetstreamError2 {
+pub enum JetstreamError {
     #[error("invalid subject")]
     Subject(#[source] SubjectValidateError),
     #[error("client closed")]
@@ -102,24 +102,24 @@ impl JetstreamClient {
     ///
     /// It returns an error if the stream name produces an invalid subject or if an error occurs
     /// while creating the stream.
-    pub async fn create_stream(&self, config: &StreamConfig) -> Result<Stream, JetstreamError2> {
+    pub async fn create_stream(&self, config: &StreamConfig) -> Result<Stream, JetstreamError> {
         let subject = format!("{}.STREAM.CREATE.{}", self.prefix, config.name)
             .try_into()
-            .map_err(JetstreamError2::Subject)?;
+            .map_err(JetstreamError::Subject)?;
 
-        let payload = serde_json::to_vec(config).map_err(JetstreamError2::Json)?;
+        let payload = serde_json::to_vec(config).map_err(JetstreamError::Json)?;
         let resp = self
             .make_request(subject)
             .payload(payload.into())
             .await
-            .map_err(JetstreamError2::ClientClosed)?;
-        let resp = resp.await.map_err(JetstreamError2::ResponseError)?;
+            .map_err(JetstreamError::ClientClosed)?;
+        let resp = resp.await.map_err(JetstreamError::ResponseError)?;
 
         let json = serde_json::from_slice::<Response<Stream>>(&resp.base.payload)
-            .map_err(JetstreamError2::Json)?;
+            .map_err(JetstreamError::Json)?;
         match json {
             Response::Response(stream) => Ok(stream),
-            Response::Error { error } => Err(JetstreamError2::Api(error)),
+            Response::Error { error } => Err(JetstreamError::Api(error)),
         }
     }
 
@@ -134,25 +134,25 @@ impl JetstreamClient {
     ///
     /// It returns an error if the given `name` produces an invalid subject or if an error occurs
     /// while creating the stream.
-    pub async fn stream(&self, name: impl Display) -> Result<Option<Stream>, JetstreamError2> {
+    pub async fn stream(&self, name: impl Display) -> Result<Option<Stream>, JetstreamError> {
         let subject = format!("{}.STREAM.INFO.{}", self.prefix, name)
             .try_into()
-            .map_err(JetstreamError2::Subject)?;
+            .map_err(JetstreamError::Subject)?;
         let resp = self
             .make_request(subject)
             .payload(Bytes::new())
             .await
-            .map_err(JetstreamError2::ClientClosed)?;
-        let resp = resp.await.map_err(JetstreamError2::ResponseError)?;
+            .map_err(JetstreamError::ClientClosed)?;
+        let resp = resp.await.map_err(JetstreamError::ResponseError)?;
 
         let json = serde_json::from_slice::<Response<Stream>>(&resp.base.payload)
-            .map_err(JetstreamError2::Json)?;
+            .map_err(JetstreamError::Json)?;
         match json {
             Response::Response(stream) => Ok(Some(stream)),
             Response::Error { error } if error.code == JetstreamErrorCode::STREAM_NOT_FOUND => {
                 Ok(None)
             }
-            Response::Error { error } => Err(JetstreamError2::Api(error)),
+            Response::Error { error } => Err(JetstreamError::Api(error)),
         }
     }
 
@@ -166,7 +166,7 @@ impl JetstreamClient {
         &self,
         stream_name: &str,
         config: &ConsumerConfig,
-    ) -> Result<Consumer, JetstreamError2> {
+    ) -> Result<Consumer, JetstreamError> {
         let mut subject = format!(
             "{}.CONSUMER.CREATE.{}.{}",
             self.prefix, stream_name, config.name
@@ -176,7 +176,7 @@ impl JetstreamClient {
             subject.push_str(filter_subject);
         }
 
-        let subject = subject.try_into().map_err(JetstreamError2::Subject)?;
+        let subject = subject.try_into().map_err(JetstreamError::Subject)?;
 
         let payload = serde_json::to_vec(&json!({
             "stream_name": stream_name,
@@ -184,19 +184,19 @@ impl JetstreamClient {
             "action": "create",
             "pedantic": true,
         }))
-        .map_err(JetstreamError2::Json)?;
+        .map_err(JetstreamError::Json)?;
         let resp = self
             .make_request(subject)
             .payload(payload.into())
             .await
-            .map_err(JetstreamError2::ClientClosed)?;
-        let resp = resp.await.map_err(JetstreamError2::ResponseError)?;
+            .map_err(JetstreamError::ClientClosed)?;
+        let resp = resp.await.map_err(JetstreamError::ResponseError)?;
 
         let json = serde_json::from_slice::<Response<Consumer>>(&resp.base.payload)
-            .map_err(JetstreamError2::Json)?;
+            .map_err(JetstreamError::Json)?;
         match json {
             Response::Response(consumer) => Ok(consumer),
-            Response::Error { error } => Err(JetstreamError2::Api(error)),
+            Response::Error { error } => Err(JetstreamError::Api(error)),
         }
     }
 
@@ -215,28 +215,28 @@ impl JetstreamClient {
         &self,
         stream_name: impl Display,
         consumer_name: impl Display,
-    ) -> Result<Option<Consumer>, JetstreamError2> {
+    ) -> Result<Option<Consumer>, JetstreamError> {
         let subject = format!(
             "{}.CONSUMER.INFO.{}.{}",
             self.prefix, stream_name, consumer_name
         )
         .try_into()
-        .map_err(JetstreamError2::Subject)?;
+        .map_err(JetstreamError::Subject)?;
         let resp = self
             .make_request(subject)
             .payload(Bytes::new())
             .await
-            .map_err(JetstreamError2::ClientClosed)?;
-        let resp = resp.await.map_err(JetstreamError2::ResponseError)?;
+            .map_err(JetstreamError::ClientClosed)?;
+        let resp = resp.await.map_err(JetstreamError::ResponseError)?;
 
         let json = serde_json::from_slice::<Response<Consumer>>(&resp.base.payload)
-            .map_err(JetstreamError2::Json)?;
+            .map_err(JetstreamError::Json)?;
         match json {
             Response::Response(stream) => Ok(Some(stream)),
             Response::Error { error } if error.code == JetstreamErrorCode::CONSUMER_NOT_FOUND => {
                 Ok(None)
             }
-            Response::Error { error } => Err(JetstreamError2::Api(error)),
+            Response::Error { error } => Err(JetstreamError::Api(error)),
         }
     }
 
@@ -250,7 +250,7 @@ impl JetstreamClient {
         consumer: &Consumer,
         expires: Duration,
         max_msgs: usize,
-    ) -> Result<ConsumerBatch, JetstreamError2> {
+    ) -> Result<ConsumerBatch, JetstreamError> {
         ConsumerBatch::new(consumer, self.clone(), expires, max_msgs).await
     }
 
