@@ -17,7 +17,7 @@ tokio = { version = "1.36", features = ["rt", "net", "time", "io-util"] }
 futures-core = "0.3.14"
 bytes = "1"
 
-tokio-websockets = { version = "0.11.1", features = ["client"], optional = true }
+tokio-websockets = { version = "0.12", features = ["client"], optional = true }
 futures-sink = { version = "0.3.14", default-features = false, optional = true }
 http = { version = "1", optional = true }
 
@@ -35,8 +35,8 @@ claims = "0.8"
 default = ["aws-lc-rs", "rand"]
 websocket = ["dep:tokio-websockets", "dep:futures-sink", "dep:http"]
 ring = ["tokio-websockets?/ring"]
-aws-lc-rs = ["tokio-websockets?/aws-lc-rs"]
-fips = ["tokio-websockets?/fips"]
+aws-lc-rs = ["tokio-websockets?/aws_lc_rs"]
+fips = []
 rand = ["tokio-websockets?/rand"]
 getrandom = ["tokio-websockets?/getrandom"]
 non-standard-zstd = ["watermelon-proto/non-standard-zstd"]
