@@ -9,7 +9,7 @@ use std::{
     task::{Context, Poll},
 };
 
-use arc_swap::ArcSwap;
+use arc_swap::ArcSwapOption;
 use bytes::Bytes;
 use thiserror::Error;
 use tokio::{
@@ -52,7 +52,7 @@ pub(crate) struct Handler {
         ConnectionCompression<ConnectionSecurity<TcpStream>>,
         ConnectionSecurity<TcpStream>,
     >,
-    info: Arc<ArcSwap<ServerInfo>>,
+    info: Arc<ArcSwapOption<ServerInfo>>,
     quick_info: Arc<RawQuickInfo>,
     delayed_write: Delayed,
     writing: bool,
@@ -75,6 +75,7 @@ pub(crate) struct Handler {
 #[derive(Debug)]
 pub(crate) struct RecycledHandler {
     commands: mpsc::Receiver<HandlerCommand>,
+    info: Arc<ArcSwapOption<ServerInfo>>,
     quick_info: Arc<RawQuickInfo>,
 
     multiplexed_subscription_prefix: Subject,
@@ -202,9 +203,10 @@ impl Handler {
 
         let delayed_write = Delayed::new(builder.write_delay);
 
+        recycle.info.store(Some(Arc::from(info)));
         Ok(Some(Self {
             conn,
-            info: Arc::new(ArcSwap::new(Arc::from(info))),
+            info: recycle.info,
             quick_info: recycle.quick_info,
             delayed_write,
             writing: false,
@@ -227,6 +229,7 @@ impl Handler {
 
         RecycledHandler {
             commands: self.commands,
+            info: self.info,
             quick_info: self.quick_info,
             subscriptions: self.subscriptions,
             multiplexed_subscription_prefix: self.multiplexed_subscription_prefix,
@@ -234,7 +237,7 @@ impl Handler {
         }
     }
 
-    pub(crate) fn info(&self) -> &Arc<ArcSwap<ServerInfo>> {
+    pub(crate) fn info(&self) -> &Arc<ArcSwapOption<ServerInfo>> {
         &self.info
     }
 
@@ -341,7 +344,7 @@ impl Handler {
             }
             ServerOp::Info { info } => {
                 self.quick_info.store_is_lameduck(info.lame_duck_mode);
-                self.info.store(Arc::from(info));
+                self.info.store(Some(Arc::from(info)));
             }
         }
 
@@ -680,6 +683,7 @@ impl RecycledHandler {
     ) -> Self {
         Self {
             commands,
+            info: Arc::new(ArcSwapOption::new(None)),
             quick_info,
             subscriptions: BTreeMap::new(),
             multiplexed_subscription_prefix: create_inbox_subject(&builder.inbox_prefix),

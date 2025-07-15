@@ -2,7 +2,7 @@
 use std::net::{IpAddr, Ipv4Addr};
 use std::{fmt::Write, num::NonZero, process::abort, sync::Arc, time::Duration};
 
-use arc_swap::ArcSwap;
+use arc_swap::ArcSwapOption;
 use bytes::Bytes;
 use tokio::{
     select,
@@ -77,7 +77,7 @@ pub struct Client {
 #[derive(Debug)]
 struct ClientInner {
     sender: mpsc::Sender<HandlerCommand>,
-    info: Arc<ArcSwap<ServerInfo>>,
+    info: Arc<ArcSwapOption<ServerInfo>>,
     quick_info: Arc<RawQuickInfo>,
     multiplexed_subscription_prefix: Subject,
     next_subscription_id: AtomicU64,
@@ -199,7 +199,7 @@ impl Client {
         let builder = Self::builder();
         let (sender, receiver) = mpsc::channel(client_to_handler_chan_size);
         let (shutdown_sender, _shutdown_receiver) = mpsc::channel(1);
-        let info = Arc::new(ArcSwap::new(Arc::from(ServerInfo {
+        let info = Arc::new(ArcSwapOption::new(Some(Arc::new(ServerInfo {
             id: "1234".to_owned(),
             name: "watermelon-test".to_owned(),
             version: "2.10.17".to_owned(),
@@ -226,7 +226,7 @@ impl Client {
             domain: None,
 
             non_standard: NonStandardServerInfo::default(),
-        })));
+        }))));
         let quick_info = Arc::new(RawQuickInfo::new());
         let multiplexed_subscription_prefix = create_inbox_subject(&builder.inbox_prefix);
 
@@ -418,8 +418,12 @@ impl Client {
     /// Consider calling [`Client::quick_info`] if you only need
     /// information about Lame Duck Mode.
     #[must_use]
+    #[expect(
+        clippy::missing_panics_doc,
+        reason = "we don't expect the panic to ever happen"
+    )]
     pub fn server_info(&self) -> Arc<ServerInfo> {
-        self.inner.info.load_full()
+        self.inner.info.load_full().expect("never connected")
     }
 
     /// Get information about the client
