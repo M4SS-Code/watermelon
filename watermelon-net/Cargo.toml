@@ -1,6 +1,6 @@
 [package]
 name = "watermelon-net"
-version = "0.2.2"
+version = "0.2.3"
 description = "Low-level NATS Core network implementation"
 categories = ["api-bindings", "network-programming"]
 keywords = ["nats", "client"]
