@@ -209,6 +209,17 @@ impl ClientBuilder {
     pub async fn connect(self, addr: ServerAddr) -> Result<Client, ConnectHandlerError> {
         Client::connect(addr, self).await
     }
+
+    /// Creates a new [`Client`], connecting to the given address in the background.
+    ///
+    /// This method is for applications that want to construct a client without
+    /// waiting for the server connection to be established. This may result in
+    /// the connection never succeeding, despite the continuous attempts
+    /// made by the client, and the [`Client`] buffer filling up with requests
+    /// and blocking all subsequent commands forever.
+    pub fn connect_lazy(self, addr: ServerAddr) -> Client {
+        Client::connect_lazy(addr, self)
+    }
 }
 
 impl Default for ClientBuilder {

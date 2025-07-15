@@ -144,34 +144,13 @@ impl Client {
                     HandlerOutput::ServerError
                     | HandlerOutput::Disconnected
                     | HandlerOutput::UnexpectedState => {
-                        let mut recycle = handle.recycle().await;
-
-                        let mut delay = MIN_RECONNECT_DELAY;
-
-                        loop {
-                            select! {
-                                biased;
-                                () = recycle.wait_shutdown() => {
-                                    return;
-                                },
-                                () = sleep(delay) => {},
-                            }
-
-                            match Handler::connect(&addr, &builder, recycle).await {
-                                Ok(Some(new_handle)) => {
-                                    handle = new_handle;
-                                    break;
-                                }
-                                Ok(None) => {
-                                    // shutdown
-                                    return;
-                                }
-                                Err((_err, prev_recycle)) => {
-                                    recycle = prev_recycle;
-                                    delay *= 2;
-                                    delay = delay.min(MAX_RECONNECT_DELAY);
-                                }
-                            }
+                        let recycle = handle.recycle().await;
+                        if let Some(new_handle) =
+                            connect(&addr, &builder, recycle, MIN_RECONNECT_DELAY).await
+                        {
+                            handle = new_handle;
+                        } else {
+                            break;
                         }
                     }
                     HandlerOutput::Closed => break,
@@ -192,6 +171,63 @@ impl Client {
                 shutdown_sender,
             }),
         })
+    }
+
+    pub(crate) fn connect_lazy(addr: ServerAddr, builder: ClientBuilder) -> Self {
+        let (sender, receiver) = mpsc::channel(CLIENT_OP_CHANNEL_SIZE);
+
+        let (shutdown_sender, shutdown_receiver) = mpsc::channel(1);
+
+        let quick_info = Arc::new(RawQuickInfo::new());
+
+        let recycle = RecycledHandler::new(
+            receiver,
+            Arc::clone(&quick_info),
+            &builder,
+            shutdown_receiver,
+        );
+        let info = Arc::clone(recycle.info());
+        let multiplexed_subscription_prefix = recycle.multiplexed_subscription_prefix().clone();
+        let inbox_prefix = builder.inbox_prefix.clone();
+        let default_response_timeout = builder.default_response_timeout;
+
+        let handler = tokio::spawn(async move {
+            let Some(mut handle) = connect(&addr, &builder, recycle, Duration::ZERO).await else {
+                return;
+            };
+            #[expect(clippy::while_let_loop)]
+            loop {
+                match (&mut handle).await {
+                    HandlerOutput::ServerError
+                    | HandlerOutput::Disconnected
+                    | HandlerOutput::UnexpectedState => {
+                        let recycle = handle.recycle().await;
+                        if let Some(new_handle) =
+                            connect(&addr, &builder, recycle, MIN_RECONNECT_DELAY).await
+                        {
+                            handle = new_handle;
+                        } else {
+                            break;
+                        }
+                    }
+                    HandlerOutput::Closed => break,
+                }
+            }
+        });
+
+        Self {
+            inner: Arc::new(ClientInner {
+                info,
+                sender,
+                quick_info,
+                multiplexed_subscription_prefix,
+                next_subscription_id: AtomicU64::new(u64::from(MULTIPLEXED_SUBSCRIPTION_ID) + 1),
+                inbox_prefix,
+                default_response_timeout,
+                handler,
+                shutdown_sender,
+            }),
+        }
     }
 
     #[cfg(test)]
@@ -417,13 +453,13 @@ impl Client {
     ///
     /// Consider calling [`Client::quick_info`] if you only need
     /// information about Lame Duck Mode.
+    ///
+    /// Returns `None` if the client was created using
+    /// [`ClientBuilder::connect_lazy`] AND the connection
+    /// has not been successfully established yet.
     #[must_use]
-    #[expect(
-        clippy::missing_panics_doc,
-        reason = "we don't expect the panic to ever happen"
-    )]
-    pub fn server_info(&self) -> Arc<ServerInfo> {
-        self.inner.info.load_full().expect("never connected")
+    pub fn server_info(&self) -> Option<Arc<ServerInfo>> {
+        self.inner.info.load_full()
     }
 
     /// Get information about the client
@@ -534,4 +570,42 @@ pub(crate) fn create_inbox_subject(prefix: &Subject) -> Subject {
     write!(&mut subject, "{}.{:x}", prefix, u128::from_ne_bytes(suffix)).unwrap();
 
     Subject::from_dangerous_value(subject.into())
+}
+
+async fn connect(
+    addr: &ServerAddr,
+    builder: &ClientBuilder,
+    mut recycle: RecycledHandler,
+    initial_delay: Duration,
+) -> Option<Handler> {
+    let mut delay = initial_delay;
+
+    loop {
+        select! {
+            biased;
+            () = recycle.wait_shutdown() => {
+                return None;
+            },
+            () = sleep(delay) => {},
+        }
+
+        match Handler::connect(addr, builder, recycle).await {
+            Ok(Some(new_handle)) => {
+                return Some(new_handle);
+            }
+            Ok(None) => {
+                // shutdown
+                return None;
+            }
+            Err((_err, prev_recycle)) => {
+                recycle = prev_recycle;
+                if delay < MIN_RECONNECT_DELAY {
+                    delay = MIN_RECONNECT_DELAY;
+                } else {
+                    delay *= 2;
+                    delay = delay.min(MAX_RECONNECT_DELAY);
+                }
+            }
+        }
+    }
 }

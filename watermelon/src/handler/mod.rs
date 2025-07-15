@@ -691,6 +691,14 @@ impl RecycledHandler {
         }
     }
 
+    pub(crate) fn info(&self) -> &Arc<ArcSwapOption<ServerInfo>> {
+        &self.info
+    }
+
+    pub(crate) fn multiplexed_subscription_prefix(&self) -> &Subject {
+        &self.multiplexed_subscription_prefix
+    }
+
     pub(crate) async fn wait_shutdown(&mut self) {
         let _ = self.shutdown_recv.recv().await;
     }
