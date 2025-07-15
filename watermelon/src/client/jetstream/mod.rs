@@ -63,7 +63,7 @@ pub enum JetstreamError2 {
     #[error("JSON deserialization")]
     Json(#[source] serde_json::Error),
     #[error("bad response code")]
-    Status(#[source] JetstreamApiError),
+    Api(#[source] JetstreamApiError),
 }
 
 impl JetstreamClient {
@@ -119,7 +119,7 @@ impl JetstreamClient {
             .map_err(JetstreamError2::Json)?;
         match json {
             Response::Response(stream) => Ok(stream),
-            Response::Error { error } => Err(JetstreamError2::Status(error)),
+            Response::Error { error } => Err(JetstreamError2::Api(error)),
         }
     }
 
@@ -152,7 +152,7 @@ impl JetstreamClient {
             Response::Error { error } if error.code == JetstreamErrorCode::STREAM_NOT_FOUND => {
                 Ok(None)
             }
-            Response::Error { error } => Err(JetstreamError2::Status(error)),
+            Response::Error { error } => Err(JetstreamError2::Api(error)),
         }
     }
 
@@ -196,7 +196,7 @@ impl JetstreamClient {
             .map_err(JetstreamError2::Json)?;
         match json {
             Response::Response(consumer) => Ok(consumer),
-            Response::Error { error } => Err(JetstreamError2::Status(error)),
+            Response::Error { error } => Err(JetstreamError2::Api(error)),
         }
     }
 
@@ -236,7 +236,7 @@ impl JetstreamClient {
             Response::Error { error } if error.code == JetstreamErrorCode::CONSUMER_NOT_FOUND => {
                 Ok(None)
             }
-            Response::Error { error } => Err(JetstreamError2::Status(error)),
+            Response::Error { error } => Err(JetstreamError2::Api(error)),
         }
     }
 
