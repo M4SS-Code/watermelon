@@ -1,6 +1,6 @@
 [package]
 name = "watermelon-proto"
-version = "0.1.6"
+version = "0.1.7"
 description = "#[no_std] NATS Core Sans-IO protocol implementation"
 categories = ["network-programming", "parser-implementations", "no-std"]
 keywords = ["nats", "client"]
