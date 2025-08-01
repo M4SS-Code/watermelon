@@ -5,7 +5,6 @@ use std::{fmt::Write, num::NonZero, process::abort, sync::Arc, time::Duration};
 use arc_swap::ArcSwapOption;
 use bytes::Bytes;
 use tokio::{
-    select,
     sync::{
         mpsc::{self, Permit, error::TrySendError},
         oneshot,
@@ -39,8 +38,8 @@ use self::tests::TestHandler;
 use crate::{
     core::{MultiplexedSubscription, Subscription},
     handler::{
-        ConnectHandlerError, Handler, HandlerCommand, HandlerOutput, MULTIPLEXED_SUBSCRIPTION_ID,
-        RecycledHandler,
+        ConnectHandlerError, FuseShutdown, Handler, HandlerCommand, HandlerOutput,
+        MULTIPLEXED_SUBSCRIPTION_ID, RecycledHandler,
     },
     util::atomic::{AtomicU64, Ordering},
 };
@@ -581,12 +580,9 @@ async fn connect(
     let mut delay = initial_delay;
 
     loop {
-        select! {
-            biased;
-            () = recycle.wait_shutdown() => {
-                return None;
-            },
-            () = sleep(delay) => {},
+        match recycle.fuse_shutdown(sleep(delay)).await {
+            FuseShutdown::Output(()) => {}
+            FuseShutdown::Shutdown => return None,
         }
 
         match Handler::connect(addr, builder, recycle).await {

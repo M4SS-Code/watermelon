@@ -1,10 +1,10 @@
 use std::{
     collections::{BTreeMap, VecDeque},
-    future::Future,
+    future::{self, Future},
     mem,
     num::NonZero,
     ops::ControlFlow,
-    pin::Pin,
+    pin::{Pin, pin},
     sync::Arc,
     task::{Context, Poll},
 };
@@ -14,7 +14,6 @@ use bytes::Bytes;
 use thiserror::Error;
 use tokio::{
     net::TcpStream,
-    select,
     sync::{
         mpsc::{self, error::TrySendError},
         oneshot,
@@ -155,17 +154,18 @@ impl Handler {
             flags.zstd_compression_level = builder.non_standard_zstd_compression_level;
         }
 
-        let (mut conn, info) = select! {
-            biased;
-            () = recycle.wait_shutdown() => {
-                return Ok(None);
+        let fut = timeout(
+            builder.connect_timeout,
+            easy_connect(addr, builder.auth_method.as_ref(), flags),
+        );
+        let (mut conn, info) = match recycle.fuse_shutdown(fut).await {
+            FuseShutdown::Output(connect_result) => match connect_result {
+                Ok(Ok(items)) => items,
+                Ok(Err(err)) => return Err((ConnectHandlerError::Connect(err), recycle)),
+                Err(_elapsed) => return Err((ConnectHandlerError::TimedOut, recycle)),
             },
-            connect_result = timeout(builder.connect_timeout, easy_connect(addr, builder.auth_method.as_ref(), flags)) => {
-                match connect_result {
-                    Ok(Ok(items)) => items,
-                    Ok(Err(err)) => return Err((ConnectHandlerError::Connect(err), recycle)),
-                    Err(_elapsed) => return Err((ConnectHandlerError::TimedOut, recycle)),
-                }
+            FuseShutdown::Shutdown => {
+                return Ok(None);
             }
         };
 
@@ -674,6 +674,12 @@ impl Handler {
     }
 }
 
+#[derive(Debug)]
+pub(crate) enum FuseShutdown<T> {
+    Output(T),
+    Shutdown,
+}
+
 impl RecycledHandler {
     pub(crate) fn new(
         commands: mpsc::Receiver<HandlerCommand>,
@@ -699,8 +705,17 @@ impl RecycledHandler {
         &self.multiplexed_subscription_prefix
     }
 
-    pub(crate) async fn wait_shutdown(&mut self) {
-        let _ = self.shutdown_recv.recv().await;
+    pub(crate) async fn fuse_shutdown<F: Future>(&mut self, fut: F) -> FuseShutdown<F::Output> {
+        let mut fut = pin!(fut);
+
+        future::poll_fn(|cx| {
+            if self.shutdown_recv.poll_recv(cx).is_ready() {
+                Poll::Ready(FuseShutdown::Shutdown)
+            } else {
+                fut.as_mut().poll(cx).map(FuseShutdown::Output)
+            }
+        })
+        .await
     }
 }
 
