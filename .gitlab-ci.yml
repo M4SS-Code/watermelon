@@ -31,7 +31,7 @@ rust:hack:
   image: rust:1.89-alpine3.20
   before_script:
     - apk add build-base musl-dev linux-headers cmake perl go
-    - cargo install --locked cargo-hack@0.6.36
+    - cargo install --locked cargo-hack@0.6.37
   script:
     - cargo hack check --feature-powerset --no-dev-deps --at-least-one-of aws-lc-rs,ring --at-least-one-of rand,getrandom
 
