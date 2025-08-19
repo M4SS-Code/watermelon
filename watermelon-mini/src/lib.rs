@@ -26,15 +26,16 @@ mod util;
 #[derive(Debug, Clone)]
 #[non_exhaustive]
 pub struct ConnectFlags {
+    pub tcp_nodelay: bool,
     pub echo: bool,
     #[cfg(feature = "non-standard-zstd")]
     pub zstd_compression_level: Option<u8>,
 }
 
-#[cfg_attr(not(feature = "non-standard-zstd"), expect(clippy::derivable_impls))]
 impl Default for ConnectFlags {
     fn default() -> Self {
         Self {
+            tcp_nodelay: true,
             echo: false,
             #[cfg(feature = "non-standard-zstd")]
             zstd_compression_level: Some(3),

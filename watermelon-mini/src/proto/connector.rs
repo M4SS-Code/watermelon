@@ -67,7 +67,8 @@ pub(crate) async fn connect(
     ConnectError,
 > {
     let conn = connect_tcp(addr).await.map_err(ConnectError::Io)?;
-    conn.set_nodelay(true).map_err(ConnectError::Io)?;
+    conn.set_nodelay(flags.tcp_nodelay)
+        .map_err(ConnectError::Io)?;
     let mut conn = ConnectionSecurity::Plain(conn);
 
     if matches!(addr.protocol(), Protocol::TLS) {
