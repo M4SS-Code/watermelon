@@ -148,6 +148,7 @@ impl Handler {
         mut recycle: RecycledHandler,
     ) -> Result<Option<Self>, (ConnectHandlerError, RecycledHandler)> {
         let mut flags = ConnectFlags::default();
+        flags.tcp_nodelay = builder.tcp_nodelay;
         flags.echo = matches!(builder.echo, Echo::Allow);
         #[cfg(feature = "non-standard-zstd")]
         {

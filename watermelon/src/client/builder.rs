@@ -12,6 +12,7 @@ use crate::{core::Client, handler::ConnectHandlerError};
 /// Obtained from [`Client::builder`].
 #[derive(Debug)]
 pub struct ClientBuilder {
+    pub(crate) tcp_nodelay: bool,
     pub(crate) auth_method: Option<AuthenticationMethod>,
     pub(crate) connect_timeout: Duration,
     pub(crate) write_delay: Duration,
@@ -39,6 +40,7 @@ pub enum Echo {
 impl ClientBuilder {
     pub(super) fn new() -> Self {
         Self {
+            tcp_nodelay: true,
             auth_method: None,
             connect_timeout: Duration::from_secs(30),
             write_delay: Duration::ZERO,
@@ -104,6 +106,23 @@ impl ClientBuilder {
         this
     }
 
+    /// Controls the Nagle algorithm for kernel-level bandwidth vs latency optimization
+    ///
+    /// Setting this to `true` disables Nagle's algorithm. The kernel
+    /// will send packets immediately, reducing latency but potentially increasing
+    /// bandwidth usage due to smaller but more frequent packets.
+    ///
+    /// Setting this to `false` enables the Nagle algorithm. The kernel
+    /// will delay small writes while unacknowledged packets are in flight,
+    /// increasing bandwidth efficiency and latency.
+    ///
+    /// Default: true
+    #[must_use]
+    pub fn tcp_nodelay(mut self, tcp_nodelay: bool) -> Self {
+        self.tcp_nodelay = tcp_nodelay;
+        self
+    }
+
     /// Define an authentication method
     #[must_use]
     pub fn authentication_method(mut self, auth_method: Option<AuthenticationMethod>) -> Self {
@@ -126,6 +145,11 @@ impl ClientBuilder {
     /// TLS and TCP packets at the cost of increased latency. Using
     /// a value greater than a few seconds may break the client in
     /// unexpected ways.
+    ///
+    /// Compared to [`ClientBuilder::tcp_nodelay`], buffering happens
+    /// at the message serialization layer, improving the bandwidth
+    /// efficiency of TLS connections and
+    /// [`ClientBuilder::non_standard_zstd_compression_level`].
     ///
     /// Setting this to [`Duration::ZERO`] causes the client to send messages
     /// as fast as the network will allow, trading off smaller packets for
