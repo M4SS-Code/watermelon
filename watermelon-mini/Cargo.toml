@@ -1,6 +1,6 @@
 [package]
 name = "watermelon-mini"
-version = "0.3.1"
+version = "0.3.2"
 description = "Minimal NATS Core client implementation"
 categories = ["api-bindings", "network-programming"]
 keywords = ["nats", "client"]
