@@ -54,10 +54,10 @@ impl QueueGroup {
         reason = "The queue group validation is only made in debug"
     )]
     pub fn from_dangerous_value(value: ByteString) -> Self {
-        if cfg!(debug_assertions) {
-            if let Err(err) = validate_queue_group(&value) {
-                panic!("QueueGroup {value:?} isn't valid {err:?}");
-            }
+        if cfg!(debug_assertions)
+            && let Err(err) = validate_queue_group(&value)
+        {
+            panic!("QueueGroup {value:?} isn't valid {err:?}");
         }
         Self(value)
     }

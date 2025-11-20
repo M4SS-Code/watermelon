@@ -53,10 +53,10 @@ impl HeaderValue {
         reason = "The header validation is only made in debug"
     )]
     pub fn from_dangerous_value(value: ByteString) -> Self {
-        if cfg!(debug_assertions) {
-            if let Err(err) = validate_header_value(&value) {
-                panic!("HeaderValue {value:?} isn't valid {err:?}");
-            }
+        if cfg!(debug_assertions)
+            && let Err(err) = validate_header_value(&value)
+        {
+            panic!("HeaderValue {value:?} isn't valid {err:?}");
         }
         Self(value)
     }

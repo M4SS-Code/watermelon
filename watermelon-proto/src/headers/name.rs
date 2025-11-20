@@ -82,10 +82,10 @@ impl HeaderName {
     )]
     #[must_use]
     pub fn from_dangerous_value(value: ByteString) -> Self {
-        if cfg!(debug_assertions) {
-            if let Err(err) = validate_header_name(&value) {
-                panic!("HeaderName {value:?} isn't valid {err:?}");
-            }
+        if cfg!(debug_assertions)
+            && let Err(err) = validate_header_name(&value)
+        {
+            panic!("HeaderName {value:?} isn't valid {err:?}");
         }
         Self(UniCase::new(value))
     }

@@ -55,10 +55,10 @@ impl Subject {
     )]
     #[must_use]
     pub fn from_dangerous_value(value: ByteString) -> Self {
-        if cfg!(debug_assertions) {
-            if let Err(err) = validate_subject(&value) {
-                panic!("Subject {value:?} isn't valid {err:?}");
-            }
+        if cfg!(debug_assertions)
+            && let Err(err) = validate_subject(&value)
+        {
+            panic!("Subject {value:?} isn't valid {err:?}");
         }
         Self(value)
     }
