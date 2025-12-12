@@ -21,7 +21,7 @@ rust:clippy:
   stage: test
   image: rust:1.92-alpine3.20
   before_script:
-    - apk add build-base musl-dev linux-headers cmake perl go
+    - apk add build-base linux-headers cmake perl go
     - rustup component add clippy
   script:
     - cargo clippy --all-features -- -D warnings
@@ -30,7 +30,7 @@ rust:hack:
   stage: test
   image: rust:1.92-alpine3.20
   before_script:
-    - apk add build-base musl-dev linux-headers cmake perl go cargo-hack
+    - apk add build-base linux-headers cmake perl go cargo-hack
   script:
     - cargo hack check --feature-powerset --no-dev-deps --at-least-one-of aws-lc-rs,ring --at-least-one-of rand,getrandom
 
@@ -38,7 +38,7 @@ rust:test:
   stage: test
   image: rust:1.92-alpine3.23
   before_script:
-    - apk add musl-dev cmake perl go
+    - apk add cmake perl go
   script:
     - cargo test
     - cargo test --features websocket,portable-atomic
