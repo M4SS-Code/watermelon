@@ -10,6 +10,7 @@ use std::{
 use bytes::Bytes;
 use futures_core::Stream;
 use pin_project_lite::pin_project;
+use serde::Serialize;
 use tokio::time::{Sleep, sleep};
 use watermelon_proto::{
     ServerMessage, StatusCode, Subject,
@@ -109,7 +110,7 @@ pub enum ResponseError {
 }
 
 macro_rules! request {
-    () => {
+    ($payload_t:ty) => {
         #[must_use]
         pub fn reply_subject(mut self, reply_subject: Option<Subject>) -> Self {
             self.request_mut().publish.reply_subject = reply_subject;
@@ -132,6 +133,19 @@ macro_rules! request {
         pub fn response_timeout(mut self, timeout: Duration) -> Self {
             self.request_mut().response_timeout = Some(timeout);
             self
+        }
+
+        /// Serialize `payload` to JSON and use it as the payload
+        ///
+        /// # Errors
+        ///
+        /// Returns an error if the serializer fails
+        pub fn payload_json<T: Serialize>(
+            self,
+            payload: &T,
+        ) -> Result<$payload_t, serde_json::Error> {
+            let payload = serde_json::to_vec(payload)?;
+            Ok(self.payload(payload.into()))
         }
     };
 }
@@ -176,7 +190,7 @@ impl RequestBuilder {
         }
     }
 
-    request!();
+    request!(Request);
 
     #[must_use]
     pub fn payload(mut self, payload: Bytes) -> Request {
@@ -197,7 +211,7 @@ impl<'a> ClientRequest<'a> {
         }
     }
 
-    request!();
+    request!(DoClientRequest<'a>);
 
     pub fn payload(mut self, payload: Bytes) -> DoClientRequest<'a> {
         self.request.publish.payload = payload;
@@ -226,7 +240,7 @@ impl OwnedClientRequest {
         }
     }
 
-    request!();
+    request!(DoOwnedClientRequest);
 
     pub fn payload(mut self, payload: Bytes) -> DoOwnedClientRequest {
         self.request.publish.payload = payload;

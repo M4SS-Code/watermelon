@@ -4,6 +4,7 @@ use std::{
 };
 
 use bytes::Bytes;
+use serde::Serialize;
 use watermelon_proto::{
     MessageBase, Subject,
     headers::{HeaderMap, HeaderName, HeaderValue},
@@ -65,7 +66,7 @@ pub struct DoOwnedClientPublish {
 }
 
 macro_rules! publish {
-    () => {
+    ($payload_t:ty) => {
         #[must_use]
         pub fn reply_subject(mut self, reply_subject: Option<Subject>) -> Self {
             self.publish_mut().reply_subject = reply_subject;
@@ -82,6 +83,19 @@ macro_rules! publish {
         pub fn headers(mut self, headers: HeaderMap) -> Self {
             self.publish_mut().headers = headers;
             self
+        }
+
+        /// Serialize `payload` to JSON and use it as the payload
+        ///
+        /// # Errors
+        ///
+        /// Returns an error if the serializer fails
+        pub fn payload_json<T: Serialize>(
+            self,
+            payload: &T,
+        ) -> Result<$payload_t, serde_json::Error> {
+            let payload = serde_json::to_vec(payload)?;
+            Ok(self.payload(payload.into()))
         }
     };
 }
@@ -145,7 +159,7 @@ impl PublishBuilder {
         }
     }
 
-    publish!();
+    publish!(Publish);
 
     #[must_use]
     pub fn payload(mut self, payload: Bytes) -> Publish {
@@ -166,7 +180,7 @@ impl<'a> ClientPublish<'a> {
         }
     }
 
-    publish!();
+    publish!(DoClientPublish<'a>);
 
     pub fn payload(mut self, payload: Bytes) -> DoClientPublish<'a> {
         self.publish.payload = payload;
@@ -195,7 +209,7 @@ impl OwnedClientPublish {
         }
     }
 
-    publish!();
+    publish!(DoOwnedClientPublish);
 
     pub fn payload(mut self, payload: Bytes) -> DoOwnedClientPublish {
         self.publish.payload = payload;
