@@ -85,7 +85,7 @@ impl KeyPair {
     }
 
     fn from_raw_seed(raw_seed: [u8; 34]) -> Result<Self, KeyPairFromSeedError> {
-        if raw_seed[0] & 248 != SEED_PREFIX_BYTE {
+        if raw_seed[0] & (u8::MAX << 3) != SEED_PREFIX_BYTE {
             println!("{:x}", raw_seed[0]);
             return Err(KeyPairFromSeedError::InvalidPrefix);
         }
