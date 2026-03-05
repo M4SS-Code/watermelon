@@ -12,6 +12,7 @@ rust-version.workspace = true
 [dependencies]
 aws-lc-rs = { version = "1.12.2", default-features = false, features = ["aws-lc-sys", "prebuilt-nasm"], optional = true }
 ring = { version = "0.17", optional = true }
+graviola = { git = "https://github.com/ctz/graviola.git", optional = true }
 crc = "3.2.1"
 thiserror = "2"
 data-encoding = { version = "2.7.0", default-features = false }
@@ -23,6 +24,7 @@ claims = "0.8"
 default = ["aws-lc-rs"]
 aws-lc-rs = ["dep:aws-lc-rs"]
 ring = ["dep:ring"]
+graviola = ["dep:graviola"]
 fips = ["aws-lc-rs", "aws-lc-rs/fips"]
 
 [lints]
