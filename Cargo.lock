@@ -414,6 +414,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280"
 
 [[package]]
+name = "graviola"
+version = "0.3.0"
+source = "git+https://github.com/ctz/graviola.git#e8fe1ada66f13af3441d74fd990e3f83cc3e8526"
+dependencies = [
+ "cfg-if",
+ "getrandom 0.3.4",
+]
+
+[[package]]
 name = "hashbrown"
 version = "0.15.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1378,7 +1387,7 @@ dependencies = [
 
 [[package]]
 name = "watermelon"
-version = "0.4.2"
+version = "0.4.3"
 dependencies = [
  "arc-swap",
  "bytes",
@@ -1451,6 +1460,7 @@ dependencies = [
  "claims",
  "crc",
  "data-encoding",
+ "graviola",
  "ring",
  "thiserror 2.0.18",
 ]
