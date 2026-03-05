@@ -88,3 +88,6 @@ jobs:
 
       - name: Run tests (--no-default-features --features ring,getrandom)
         run: cargo test --no-default-features --features ring,getrandom
+
+      - name: Run tests (--no-default-features --features graviola,getrandom)
+        run: cargo test --no-default-features --features graviola,getrandom

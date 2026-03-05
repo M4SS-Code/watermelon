@@ -6,7 +6,7 @@ use rustls_platform_verifier::Verifier;
 use tokio::net::TcpStream;
 use tokio_rustls::{
     TlsConnector,
-    rustls::{self, ClientConfig, crypto::CryptoProvider, version::TLS13},
+    rustls::{ClientConfig, crypto::CryptoProvider, version::TLS13},
 };
 use watermelon_net::Connection;
 use watermelon_proto::{ServerAddr, ServerInfo};
@@ -87,9 +87,15 @@ pub async fn easy_connect(
 
 fn crypto_provider() -> CryptoProvider {
     #[cfg(feature = "aws-lc-rs")]
-    return rustls::crypto::aws_lc_rs::default_provider();
+    return tokio_rustls::rustls::crypto::aws_lc_rs::default_provider();
     #[cfg(all(not(feature = "aws-lc-rs"), feature = "ring"))]
-    return rustls::crypto::ring::default_provider();
-    #[cfg(not(any(feature = "aws-lc-rs", feature = "ring")))]
-    compile_error!("Please enable the `aws-lc-rs` or the `ring` feature")
+    return tokio_rustls::rustls::crypto::ring::default_provider();
+    #[cfg(all(
+        not(feature = "aws-lc-rs"),
+        not(feature = "ring"),
+        feature = "graviola"
+    ))]
+    return rustls_graviola::default_provider();
+    #[cfg(not(any(feature = "aws-lc-rs", feature = "ring", feature = "graviola")))]
+    compile_error!("Please enable the `aws-lc-rs`, the `ring` or the `graviola` feature")
 }

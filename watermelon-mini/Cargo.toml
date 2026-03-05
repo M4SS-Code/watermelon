@@ -15,6 +15,7 @@ features = ["websocket", "non-standard-zstd"]
 [dependencies]
 tokio = { version = "1.36", features = ["net"] }
 tokio-rustls = { version = "0.26", default-features = false }
+rustls-graviola = { version = "0.3.4", default-features = false, optional = true }
 rustls-platform-verifier = "0.6"
 
 watermelon-net = { version = "0.2", path = "../watermelon-net", default-features = false }
@@ -32,6 +33,7 @@ websocket = ["watermelon-net/websocket"]
 aws-lc-rs = ["tokio-rustls/aws-lc-rs", "watermelon-net/aws-lc-rs", "watermelon-nkeys/aws-lc-rs"]
 ring = ["tokio-rustls/ring", "watermelon-net/ring", "watermelon-nkeys/ring"]
 fips = ["tokio-rustls/fips", "watermelon-net/fips", "watermelon-nkeys/fips"]
+graviola = ["dep:rustls-graviola", "watermelon-net/graviola", "watermelon-nkeys/graviola"]
 rand = ["watermelon-net/rand"]
 getrandom = ["watermelon-net/getrandom"]
 non-standard-zstd = ["watermelon-net/non-standard-zstd", "watermelon-proto/non-standard-zstd", "dep:async-compression", "async-compression/zstd"]
