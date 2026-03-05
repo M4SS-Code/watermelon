@@ -3,13 +3,26 @@ use std::fmt::{self, Debug, Display};
 #[cfg(feature = "aws-lc-rs")]
 use aws_lc_rs::signature::{Ed25519KeyPair, KeyPair as _, Signature as LlSignature};
 use data_encoding::{BASE32_NOPAD, BASE64URL_NOPAD};
+#[cfg(all(
+    not(feature = "aws-lc-rs"),
+    not(feature = "ring"),
+    feature = "graviola"
+))]
+use graviola::signing::eddsa::Ed25519SigningKey as Ed25519KeyPair;
 #[cfg(all(not(feature = "aws-lc-rs"), feature = "ring"))]
 use ring::signature::{Ed25519KeyPair, KeyPair as _, Signature as LlSignature};
 
-#[cfg(not(any(feature = "aws-lc-rs", feature = "ring")))]
-compile_error!("Please enable the `aws-lc-rs` or the `ring` feature");
+#[cfg(not(any(feature = "aws-lc-rs", feature = "ring", feature = "graviola")))]
+compile_error!("Please enable the `aws-lc-rs`, the `ring` or the `graviola` feature");
 
 use crate::crc::Crc16;
+
+#[cfg(all(
+    not(feature = "aws-lc-rs"),
+    not(feature = "ring"),
+    feature = "graviola"
+))]
+type LlSignature = [u8; 64];
 
 const SEED_PREFIX_BYTE: u8 = 18 << 3;
 
@@ -91,8 +104,11 @@ impl KeyPair {
 
         let kind = raw_seed[1];
 
+        #[cfg(any(feature = "aws-lc-rs", feature = "ring"))]
         let key = Ed25519KeyPair::from_seed_unchecked(&raw_seed[2..])
             .map_err(|_| KeyPairFromSeedError::DecodeError)?;
+        #[cfg(not(any(feature = "aws-lc-rs", feature = "ring")))]
+        let key = Ed25519KeyPair::from_bytes(raw_seed[2..].try_into().unwrap()).unwrap();
         Ok(Self { kind, key })
     }
 
@@ -126,7 +142,11 @@ impl Display for PublicKey<'_> {
         let mut full_raw_seed = [0; 36];
         full_raw_seed[0] = SEED_PREFIX_BYTE;
         full_raw_seed[1] = self.0.kind;
-        full_raw_seed[2..34].copy_from_slice(self.0.key.public_key().as_ref());
+        #[cfg(any(feature = "aws-lc-rs", feature = "ring"))]
+        let public_key_bytes = self.0.key.public_key().as_ref();
+        #[cfg(not(any(feature = "aws-lc-rs", feature = "ring")))]
+        let public_key_bytes = &self.0.key.public_key().as_bytes();
+        full_raw_seed[2..34].copy_from_slice(public_key_bytes);
         let crc = Crc16::compute(&full_raw_seed[..34]);
         full_raw_seed[34..36].copy_from_slice(&crc.to_raw_encoded());
         Display::fmt(&BASE32_NOPAD.encode_display(&full_raw_seed), f)

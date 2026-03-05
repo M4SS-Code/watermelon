@@ -43,3 +43,4 @@ rust:test:
     - cargo test
     - cargo test --features websocket,portable-atomic
     - cargo test --no-default-features --features ring,getrandom
+    - cargo test --no-default-features --features graviola,getrandom

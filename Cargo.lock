@@ -414,6 +414,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280"
 
 [[package]]
+name = "graviola"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4387e0458389da24c6fe732531e65595c7c4a32b027f98f4789e512e28224465"
+dependencies = [
+ "cfg-if",
+ "getrandom 0.3.4",
+]
+
+[[package]]
 name = "hashbrown"
 version = "0.15.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -907,6 +917,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustls-graviola"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "323c712e50c59ceb2ba9ad4d79dcfd3e0046a082d61efa87fcdf8f59af04473c"
+dependencies = [
+ "graviola",
+ "rustls",
+]
+
+[[package]]
 name = "rustls-native-certs"
 version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1061,6 +1081,12 @@ dependencies = [
  "serde_core",
  "zmij",
 ]
+
+[[package]]
+name = "sha1_smol"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bbfa15b3dddfee50a0fff136974b3e1bde555604ba463834a7eb7deb6417705d"
 
 [[package]]
 name = "shlex"
@@ -1250,6 +1276,7 @@ dependencies = [
  "httparse",
  "rand",
  "ring",
+ "sha1_smol",
  "simdutf8",
  "tokio",
  "tokio-util",
@@ -1407,6 +1434,7 @@ name = "watermelon-mini"
 version = "0.3.2"
 dependencies = [
  "async-compression",
+ "rustls-graviola",
  "rustls-platform-verifier",
  "thiserror 2.0.18",
  "tokio",
@@ -1441,6 +1469,7 @@ dependencies = [
  "claims",
  "crc",
  "data-encoding",
+ "graviola",
  "ring",
  "thiserror 2.0.18",
 ]
