@@ -1,6 +1,10 @@
 macro_rules! parse_unsigned {
     ($name:ident, $num:ty) => {
         pub(crate) fn $name(buf: &[u8]) -> Result<$num, ParseUintError> {
+            if buf.is_empty() {
+                return Err(ParseUintError::Empty);
+            }
+
             let mut val: $num = 0;
 
             for &b in buf {
@@ -25,6 +29,8 @@ parse_unsigned!(parse_usize, usize);
 
 #[derive(Debug, thiserror::Error)]
 pub enum ParseUintError {
+    #[error("empty input")]
+    Empty,
     #[error("invalid byte {0:?}")]
     InvalidByte(u8),
     #[error("overflow")]
@@ -35,9 +41,16 @@ pub enum ParseUintError {
 mod tests {
     use alloc::string::ToString;
 
-    use claims::assert_ok_eq;
+    use claims::{assert_matches, assert_ok_eq};
 
-    use super::{parse_u16, parse_u64, parse_usize};
+    use super::{ParseUintError, parse_u16, parse_u64, parse_usize};
+
+    #[test]
+    fn parse_empty_input() {
+        assert_matches!(parse_u16(b""), Err(ParseUintError::Empty));
+        assert_matches!(parse_u64(b""), Err(ParseUintError::Empty));
+        assert_matches!(parse_usize(b""), Err(ParseUintError::Empty));
+    }
 
     #[test]
     fn parse_u16_range() {
