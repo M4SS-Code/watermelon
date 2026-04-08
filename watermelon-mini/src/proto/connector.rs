@@ -31,21 +31,21 @@ use super::{
 
 #[derive(Debug, thiserror::Error)]
 pub enum ConnectError {
-    #[error("io error")]
+    #[error("connection I/O error")]
     Io(#[source] io::Error),
-    #[error("TLS error")]
+    #[error("TLS handshake failed")]
     Tls(rustls::Error),
     #[error("invalid DNS name")]
     InvalidDnsName(#[source] InvalidDnsNameError),
     #[error("websocket not supported")]
     WebsocketUnsupported,
-    #[error("unexpected ServerOp")]
+    #[error("received unexpected server operation during connect")]
     UnexpectedServerOp,
-    #[error("decoder error")]
+    #[error("failed to decode server message")]
     Decoder(#[source] DecoderError),
-    #[error("authentication error")]
+    #[error("authentication failed")]
     Authentication(#[source] AuthenticationError),
-    #[error("connect")]
+    #[error("connect handshake failed")]
     Connect(#[source] watermelon_net::error::ConnectError),
 }
 

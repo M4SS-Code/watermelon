@@ -39,10 +39,10 @@ pub struct WebsocketConnection<S> {
 
 #[derive(Debug, thiserror::Error)]
 pub enum ConnectionReadError {
-    #[error("streaming connection error")]
+    #[error("failed to read from streaming connection")]
     Streaming(#[source] StreamingReadError),
     #[cfg(feature = "websocket")]
-    #[error("websocket connection error")]
+    #[error("failed to read from websocket connection")]
     Websocket(#[source] WebsocketReadError),
 }
 
@@ -188,13 +188,13 @@ where
 
 #[derive(Debug, thiserror::Error)]
 pub enum ConnectError {
-    #[error("proto")]
+    #[error("failed to decode server message")]
     Proto(#[source] DecoderError),
-    #[error("server")]
+    #[error("server returned an error during connect")]
     ServerError(#[source] ServerError),
-    #[error("io")]
+    #[error("connection I/O error during connect handshake")]
     Io(#[source] io::Error),
-    #[error("unexpected ServerOp")]
+    #[error("received unexpected server operation during connect handshake")]
     UnexpectedOp,
 }
 
