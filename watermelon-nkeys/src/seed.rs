@@ -39,13 +39,13 @@ pub struct PublicKey<'a>(&'a KeyPair);
 /// An error encountered while decoding an `NKey`.
 #[derive(Debug, thiserror::Error)]
 pub enum KeyPairFromSeedError {
-    /// The string rapresentation of the seed has an invalid length.
-    #[error("invalid length of the seed's string the string rapresentation")]
+    /// The string representation of the seed has an invalid length.
+    #[error("invalid length of the seed's string the string representation")]
     InvalidSeedLength,
-    /// The string rapresentation of the seed contains characters that are not part of the base32 dictionary.
+    /// The string representation of the seed contains characters that are not part of the base32 dictionary.
     #[error("the seed contains non-base32 characters")]
     InvalidBase32,
-    /// The decoded base32 rapresentation of the seed has an invalid length.
+    /// The decoded base32 representation of the seed has an invalid length.
     #[error("invalid base32 decoded seed length")]
     InvalidRawSeedLength,
     /// The CRC does not match the crc calculated for the seed payload.

@@ -373,11 +373,11 @@ pub enum DecoderError {
     StatusCode(#[source] StatusCodeError),
     #[error("The header name isn't valid utf-8")]
     HeaderNameInvalidUtf8,
-    #[error("The header name coouldn't be parsed")]
+    #[error("The header name couldn't be parsed")]
     HeaderName(#[source] HeaderNameValidateError),
     #[error("The header value isn't valid utf-8")]
     HeaderValueInvalidUtf8,
-    #[error("The header value coouldn't be parsed")]
+    #[error("The header value couldn't be parsed")]
     HeaderValue(#[source] HeaderValueValidateError),
     #[error("INFO command JSON payload couldn't be deserialized")]
     InvalidInfo(#[source] serde_json::Error),
