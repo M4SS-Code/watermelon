@@ -94,7 +94,7 @@ impl ClientBuilder {
                     password,
                 }));
             }
-            from_env::AuthenticationMethod::None => {
+            from_env::AuthenticationMethod::None {} => {
                 this = this.authentication_method(None);
             }
         }
