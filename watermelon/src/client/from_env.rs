@@ -30,7 +30,7 @@ pub(super) enum AuthenticationMethod {
         #[serde(rename = "nats_password")]
         password: String,
     },
-    None,
+    None {},
 }
 
 fn deserialize_nkey<'de, D>(deserializer: D) -> Result<KeyPair, D::Error>
