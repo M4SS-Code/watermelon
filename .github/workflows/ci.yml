@@ -40,7 +40,7 @@ jobs:
           components: clippy
 
       - name: Run clippy
-        run: cargo clippy --all-features -- -D warnings
+        run: cargo clippy --locked --all-features -- -D warnings
 
   cargo-hack:
     name: cargo-hack / 1.95.0
@@ -81,13 +81,13 @@ jobs:
           toolchain: ${{ matrix.rust }}
 
       - name: Run tests
-        run: cargo test
+        run: cargo test --locked
 
       - name: Run tests (--features websocket,portable-atomic)
-        run: cargo test --features websocket,portable-atomic
+        run: cargo test --locked --features websocket,portable-atomic
 
       - name: Run tests (--no-default-features --features ring,getrandom)
-        run: cargo test --no-default-features --features ring,getrandom
+        run: cargo test --locked --no-default-features --features ring,getrandom
 
       - name: Run tests (--no-default-features --features graviola,getrandom)
-        run: cargo test --no-default-features --features graviola,getrandom
+        run: cargo test --locked --no-default-features --features graviola,getrandom

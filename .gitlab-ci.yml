@@ -24,7 +24,7 @@ rust:clippy:
     - apk add build-base linux-headers cmake perl go
     - rustup component add clippy
   script:
-    - cargo clippy --all-features -- -D warnings
+    - cargo clippy --locked --all-features -- -D warnings
 
 rust:hack:
   stage: test
@@ -40,7 +40,7 @@ rust:test:
   before_script:
     - apk add cmake perl go
   script:
-    - cargo test
-    - cargo test --features websocket,portable-atomic
-    - cargo test --no-default-features --features ring,getrandom
-    - cargo test --no-default-features --features graviola,getrandom
+    - cargo test --locked
+    - cargo test --locked --features websocket,portable-atomic
+    - cargo test --locked --no-default-features --features ring,getrandom
+    - cargo test --locked --no-default-features --features graviola,getrandom
