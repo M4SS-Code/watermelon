@@ -25,11 +25,13 @@ pub use self::commands::{
     RequestBuilder, ResponseError, ResponseFut,
 };
 pub use self::jetstream::{
-    AckPolicy, Compression, Consumer, ConsumerBatch, ConsumerConfig, ConsumerDurability,
-    ConsumerSpecificConfig, ConsumerStorage, ConsumerStream, ConsumerStreamError, Consumers,
-    DeliverPolicy, DiscardPolicy, JetstreamApiError, JetstreamClient, JetstreamError,
-    JetstreamErrorCode, JetstreamMessage, JetstreamMessageAckError, ReplayPolicy, RetentionPolicy,
-    Storage, Stream, StreamConfig, StreamState, Streams,
+    AckPolicy, ClientJetstreamPublish, Compression, Consumer, ConsumerBatch, ConsumerConfig,
+    ConsumerDurability, ConsumerSpecificConfig, ConsumerStorage, ConsumerStream,
+    ConsumerStreamError, Consumers, DeliverPolicy, DiscardPolicy, DoClientJetstreamPublish,
+    DoOwnedClientJetstreamPublish, JetstreamApiError, JetstreamClient, JetstreamError,
+    JetstreamErrorCode, JetstreamMessage, JetstreamMessageAckError, JetstreamPublish,
+    JetstreamPublishBuilder, JetstreamPublishError, OwnedClientJetstreamPublish, PubAck,
+    ReplayPolicy, RetentionPolicy, Storage, Stream, StreamConfig, StreamState, Streams,
 };
 pub use self::quick_info::QuickInfo;
 pub(crate) use self::quick_info::RawQuickInfo;

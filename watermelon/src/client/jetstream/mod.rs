@@ -9,8 +9,10 @@ use watermelon_proto::StatusCode;
 use watermelon_proto::{Subject, error::SubjectValidateError};
 
 pub use self::commands::{
-    ConsumerBatch, ConsumerStream, ConsumerStreamError, Consumers, JetstreamMessage,
-    JetstreamMessageAckError, Streams,
+    ClientJetstreamPublish, ConsumerBatch, ConsumerStream, ConsumerStreamError, Consumers,
+    DoClientJetstreamPublish, DoOwnedClientJetstreamPublish, JetstreamMessage,
+    JetstreamMessageAckError, JetstreamPublish, JetstreamPublishBuilder, JetstreamPublishError,
+    OwnedClientJetstreamPublish, PubAck, Streams,
 };
 pub use self::resources::{
     AckPolicy, Compression, Consumer, ConsumerConfig, ConsumerDurability, ConsumerSpecificConfig,
@@ -67,6 +69,8 @@ pub enum JetstreamError {
     Json(#[source] serde_json::Error),
     #[error("bad response code")]
     Api(#[source] JetstreamApiError),
+    #[error("publish error")]
+    PublishStatus(#[source] JetstreamPublishError),
 }
 
 impl JetstreamClient {
@@ -275,6 +279,23 @@ impl JetstreamClient {
         self.client
             .request(subject)
             .response_timeout(self.request_timeout)
+    }
+
+    /// Start building a `JetStream` publish operation.
+    ///
+    /// Returns a builder that allows setting JetStream-specific headers
+    /// like stream targeting, deduplication, and sequence expectations.
+    #[must_use]
+    pub fn publish(&self, subject: Subject) -> ClientJetstreamPublish<'_> {
+        ClientJetstreamPublish::build(self, subject)
+    }
+
+    /// Start building a `JetStream` publish operation, taking ownership of the client.
+    ///
+    /// When possible consider using [`JetstreamClient::publish`] instead.
+    #[must_use]
+    pub fn publish_owned(self, subject: Subject) -> OwnedClientJetstreamPublish {
+        OwnedClientJetstreamPublish::build(self, subject)
     }
 
     /// Get a reference to the inner NATS Core client

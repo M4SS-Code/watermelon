@@ -53,10 +53,12 @@ pub mod jetstream {
     //! Relies on NATS Core to communicate with the NATS server
 
     pub use crate::client::{
-        AckPolicy, Compression, Consumer, ConsumerBatch, ConsumerConfig, ConsumerDurability,
-        ConsumerSpecificConfig, ConsumerStorage, ConsumerStream, Consumers, DeliverPolicy,
-        DiscardPolicy, JetstreamClient, JetstreamMessage, JetstreamMessageAckError, ReplayPolicy,
-        RetentionPolicy, Storage, Stream, StreamConfig, StreamState, Streams,
+        AckPolicy, ClientJetstreamPublish, Compression, Consumer, ConsumerBatch, ConsumerConfig,
+        ConsumerDurability, ConsumerSpecificConfig, ConsumerStorage, ConsumerStream, Consumers,
+        DeliverPolicy, DiscardPolicy, DoClientJetstreamPublish, DoOwnedClientJetstreamPublish,
+        JetstreamClient, JetstreamMessage, JetstreamMessageAckError, JetstreamPublish,
+        JetstreamPublishBuilder, JetstreamPublishError, OwnedClientJetstreamPublish, PubAck,
+        ReplayPolicy, RetentionPolicy, Storage, Stream, StreamConfig, StreamState, Streams,
     };
 
     pub mod error {
@@ -64,7 +66,7 @@ pub mod jetstream {
 
         pub use crate::client::{
             ConsumerStreamError, JetstreamApiError, JetstreamError, JetstreamErrorCode,
-            JetstreamMessageAckError,
+            JetstreamMessageAckError, JetstreamPublishError,
         };
     }
 }
