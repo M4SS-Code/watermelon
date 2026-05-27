@@ -7,14 +7,13 @@ use std::{
 
 use futures_core::{FusedStream, Stream};
 use pin_project_lite::pin_project;
-use watermelon_proto::ServerMessage;
 
 use crate::{
     client::{Consumer, JetstreamClient, JetstreamError},
     util::BoxFuture,
 };
 
-use super::{ConsumerBatch, consumer_batch::ConsumerBatchError};
+use super::{ConsumerBatch, consumer_batch::ConsumerBatchError, message::JetstreamMessage};
 
 pin_project! {
     /// A consumer stream of batch requests
@@ -78,7 +77,7 @@ impl ConsumerStream {
 }
 
 impl Stream for ConsumerStream {
-    type Item = Result<ServerMessage, ConsumerStreamError>;
+    type Item = Result<JetstreamMessage, ConsumerStreamError>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let mut this = self.project();

@@ -11,14 +11,20 @@ use tokio::time::{Sleep, sleep};
 use watermelon_proto::{ServerMessage, StatusCode, error::ServerError};
 
 use crate::{
-    client::{Consumer, JetstreamClient, JetstreamError},
+    client::{Client, Consumer, JetstreamClient, JetstreamError},
     subscription::Subscription,
 };
+
+use super::message::JetstreamMessage;
 
 pin_project! {
     /// A consumer batch request
     ///
     /// Obtained from [`JetstreamClient::consumer_batch`].
+    ///
+    /// Yields [`JetstreamMessage`] items that support acknowledgment
+    /// via [`ack`](JetstreamMessage::ack), [`nak`](JetstreamMessage::nak),
+    /// [`term`](JetstreamMessage::term), and [`progress`](JetstreamMessage::progress).
     #[derive(Debug)]
     #[must_use = "streams do nothing unless polled"]
     pub struct ConsumerBatch {
@@ -26,6 +32,7 @@ pin_project! {
         #[pin]
         timeout: Sleep,
         pending_msgs: usize,
+        client: Client,
     }
 }
 
@@ -85,13 +92,14 @@ impl ConsumerBatch {
                 subscription,
                 timeout,
                 pending_msgs: max_msgs,
+                client: client.client,
             })
         }
     }
 }
 
 impl Stream for ConsumerBatch {
-    type Item = Result<ServerMessage, ConsumerBatchError>;
+    type Item = Result<JetstreamMessage, ConsumerBatchError>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let this = self.project();
@@ -112,7 +120,7 @@ impl Stream for ConsumerBatch {
                 None | Some(StatusCode::OK) => {
                     *this.pending_msgs -= 1;
 
-                    Poll::Ready(Some(Ok(msg)))
+                    Poll::Ready(Some(Ok(JetstreamMessage::new(msg, this.client.clone()))))
                 }
                 Some(StatusCode::IDLE_HEARTBEAT) => {
                     cx.waker().wake_by_ref();
