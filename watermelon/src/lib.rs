@@ -55,8 +55,8 @@ pub mod jetstream {
     pub use crate::client::{
         AckPolicy, Compression, Consumer, ConsumerBatch, ConsumerConfig, ConsumerDurability,
         ConsumerSpecificConfig, ConsumerStorage, ConsumerStream, Consumers, DeliverPolicy,
-        DiscardPolicy, JetstreamClient, ReplayPolicy, RetentionPolicy, Storage, Stream,
-        StreamConfig, StreamState, Streams,
+        DiscardPolicy, JetstreamClient, JetstreamMessage, JetstreamMessageAckError, ReplayPolicy,
+        RetentionPolicy, Storage, Stream, StreamConfig, StreamState, Streams,
     };
 
     pub mod error {
@@ -64,6 +64,7 @@ pub mod jetstream {
 
         pub use crate::client::{
             ConsumerStreamError, JetstreamApiError, JetstreamError, JetstreamErrorCode,
+            JetstreamMessageAckError,
         };
     }
 }

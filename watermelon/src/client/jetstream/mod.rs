@@ -8,7 +8,10 @@ use serde_json::json;
 use watermelon_proto::StatusCode;
 use watermelon_proto::{Subject, error::SubjectValidateError};
 
-pub use self::commands::{ConsumerBatch, ConsumerStream, ConsumerStreamError, Consumers, Streams};
+pub use self::commands::{
+    ConsumerBatch, ConsumerStream, ConsumerStreamError, Consumers, JetstreamMessage,
+    JetstreamMessageAckError, Streams,
+};
 pub use self::resources::{
     AckPolicy, Compression, Consumer, ConsumerConfig, ConsumerDurability, ConsumerSpecificConfig,
     ConsumerStorage, DeliverPolicy, DiscardPolicy, ReplayPolicy, RetentionPolicy, Storage, Stream,
