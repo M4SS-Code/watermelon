@@ -239,8 +239,8 @@ impl Client {
         let info = Arc::new(ArcSwapOption::new(Some(Arc::new(ServerInfo {
             id: "1234".to_owned(),
             name: "watermelon-test".to_owned(),
-            version: "2.10.17".to_owned(),
-            go_version: "1.22.5".to_owned(),
+            version: "2.12.9".to_owned(),
+            go_version: "1.25.10".to_owned(),
             host: IpAddr::V4(Ipv4Addr::LOCALHOST),
             port: NonZero::new(4222).unwrap(),
             supports_headers: true,

@@ -153,8 +153,6 @@ struct RawConsumerConfig {
     #[serde(default, skip_serializing_if = "Vec::is_empty", with = "duration_vec")]
     backoff: Vec<Duration>,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
-    filter_subject: Option<Subject>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     filter_subjects: Vec<Subject>,
     replay_policy: ReplayPolicy,
@@ -206,11 +204,7 @@ impl Serialize for ConsumerConfig {
             ConsumerDurability::Durable => (self.name.clone(), self.name.clone()),
         };
 
-        let (filter_subject, filter_subjects) = if let [filter_subject] = &*self.filter_subjects {
-            (Some(filter_subject.clone()), Vec::new())
-        } else {
-            (None, self.filter_subjects.clone())
-        };
+        let filter_subjects = self.filter_subjects.clone();
 
         let (
             max_waiting,
@@ -263,7 +257,6 @@ impl Serialize for ConsumerConfig {
             ack_policy: self.ack_policy,
             max_deliver: self.max_deliver,
             backoff: self.backoff.clone(),
-            filter_subject,
             filter_subjects,
             replay_policy: self.replay_policy,
             rate_limit: self.rate_limit,
@@ -300,7 +293,6 @@ impl<'de> Deserialize<'de> for ConsumerConfig {
             ack_policy,
             max_deliver,
             backoff,
-            filter_subject,
             filter_subjects,
             replay_policy,
             rate_limit,
@@ -326,12 +318,6 @@ impl<'de> Deserialize<'de> for ConsumerConfig {
             return Err(de::Error::custom(
                 "consumer neither has a name or a durable name",
             ));
-        };
-
-        let filter_subjects = if let Some(filter_subject) = filter_subject {
-            vec![filter_subject]
-        } else {
-            filter_subjects
         };
 
         let specs = match deliver_subject {

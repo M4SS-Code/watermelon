@@ -28,7 +28,7 @@ Watermelon is divided into multiple crates, all hosted in the same monorepo.
 1. **Security by design**: this library uses type-safe and checked APIs, such as `Subject`, to prevent entire classes of errors and security vulnerabilities.
 2. **Layering and composability**: the library is split into layers. You can get a high-level, batteries included implementation via `watermelon`, or depend directly on the lower-level crates for maximum flexibility.
 3. **Opinionated, Rusty take**: we adapt the Go-style API of nats-server and apply different trade-offs to make NATS feel more Rusty. We sacrifice a bit of performance by enabling server verbose mode, and get better errors in return.
-4. **Legacy is in the past**: we only support `nats-server >= 2.10` and avoid legacy versions compatibility code like the STARTTLS-style TLS upgrade path or fallbacks for older JetStream APIs. We also prefer pull consumers over push consumers given the robust flow control, easier compatibility with multi-account environments and stronger permissions handling.
+4. **Legacy is in the past**: we only support `nats-server >= 2.12` and avoid legacy versions compatibility code like the STARTTLS-style TLS upgrade path or fallbacks for older JetStream APIs. We also prefer pull consumers over push consumers given the robust flow control, easier compatibility with multi-account environments and stronger permissions handling.
 5. **Permissive licensing**: dual licensed under MIT and APACHE-2.0.
 
 ## License
