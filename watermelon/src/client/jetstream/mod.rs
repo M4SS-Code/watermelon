@@ -247,6 +247,40 @@ impl JetstreamClient {
         }
     }
 
+    /// Delete a consumer from a stream
+    ///
+    /// # Errors
+    ///
+    /// It returns an error if the given `stream_name` and `consumer_name` produce an invalid
+    /// subject or if an error occurs while deleting the consumer.
+    pub async fn delete_consumer(
+        &self,
+        stream_name: impl Display,
+        consumer_name: impl Display,
+    ) -> Result<(), JetstreamError> {
+        let subject = format!(
+            "{}.CONSUMER.DELETE.{}.{}",
+            self.prefix, stream_name, consumer_name
+        )
+        .try_into()
+        .map_err(JetstreamError::Subject)?;
+        let resp = self
+            .make_request(subject)
+            .payload(Bytes::new())
+            .await
+            .map_err(JetstreamError::ClientClosed)?;
+        let resp = resp.await.map_err(JetstreamError::ResponseError)?;
+
+        let json = serde_json::from_slice::<Response<resources::DeleteConsumerResponse>>(
+            &resp.base.payload,
+        )
+        .map_err(JetstreamError::Json)?;
+        match json {
+            Response::Response(_) => Ok(()),
+            Response::Error { error } => Err(JetstreamError::Api(error)),
+        }
+    }
+
     /// Run a batch request over the provided `consumer`
     ///
     /// # Errors

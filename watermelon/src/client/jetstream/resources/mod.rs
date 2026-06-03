@@ -20,6 +20,13 @@ pub(crate) enum Response<T> {
     Error { error: JetstreamApiError },
 }
 
+/// Response from a Jetstream consumer delete operation.
+#[derive(Debug, Deserialize)]
+pub(crate) struct DeleteConsumerResponse {
+    #[allow(dead_code)]
+    success: bool,
+}
+
 mod nullable_number {
     use std::{any::type_name, fmt::Display};
 
