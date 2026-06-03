@@ -323,6 +323,7 @@ impl JetstreamErrorCode {
     pub const COULD_NOT_CREATE_CONSUMER: Self = Self(10012);
     pub const CONSUMER_NOT_FOUND: Self = Self(10014);
     pub const CONSUMER_NAME_IN_USE: Self = Self(10148);
+    pub const CONSUMER_DOES_NOT_EXIST: Self = Self(10149);
 
     pub const CONSUMER_DUPLICATE_FILTER_SUBJECTS: Self = Self(10136);
     pub const CONSUMER_OVERLAPPING_FILTER_SUBJECTS: Self = Self(10138);
