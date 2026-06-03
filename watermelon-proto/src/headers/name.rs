@@ -2,6 +2,7 @@ use alloc::string::String;
 use core::{
     fmt::{self, Display},
     ops::Deref,
+    str::FromStr,
 };
 use unicase::UniCase;
 
@@ -116,6 +117,15 @@ impl TryFrom<ByteString> for HeaderName {
     fn try_from(value: ByteString) -> Result<Self, Self::Error> {
         validate_header_name(&value)?;
         Ok(Self::from_dangerous_value(value))
+    }
+}
+
+impl FromStr for HeaderName {
+    type Err = HeaderNameValidateError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        validate_header_name(value)?;
+        Ok(Self::from_dangerous_value(value.into()))
     }
 }
 

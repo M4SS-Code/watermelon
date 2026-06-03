@@ -2,6 +2,7 @@ use alloc::string::String;
 use core::{
     fmt::{self, Display},
     ops::Deref,
+    str::FromStr,
 };
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
@@ -81,6 +82,15 @@ impl TryFrom<ByteString> for Subject {
     fn try_from(value: ByteString) -> Result<Self, Self::Error> {
         validate_subject(&value)?;
         Ok(Self::from_dangerous_value(value))
+    }
+}
+
+impl FromStr for Subject {
+    type Err = SubjectValidateError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        validate_subject(value)?;
+        Ok(Self::from_dangerous_value(value.into()))
     }
 }
 

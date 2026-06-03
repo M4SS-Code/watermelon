@@ -2,6 +2,7 @@ use alloc::string::String;
 use core::{
     fmt::{self, Display},
     ops::Deref,
+    str::FromStr,
 };
 
 use bytestring::ByteString;
@@ -79,6 +80,15 @@ impl TryFrom<ByteString> for HeaderValue {
     fn try_from(value: ByteString) -> Result<Self, Self::Error> {
         validate_header_value(&value)?;
         Ok(Self::from_dangerous_value(value))
+    }
+}
+
+impl FromStr for HeaderValue {
+    type Err = HeaderValueValidateError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        validate_header_value(value)?;
+        Ok(Self::from_dangerous_value(value.into()))
     }
 }
 
