@@ -15,7 +15,7 @@ features = ["websocket", "non-standard-zstd"]
 [dependencies]
 tokio = { version = "1.36", features = ["net"] }
 tokio-rustls = { version = "0.26", default-features = false }
-rustls-graviola = { version = "0.3.4", default-features = false, optional = true }
+rustls-graviola = { version = "0.4", default-features = false, optional = true }
 rustls-platform-verifier = "0.7"
 
 watermelon-net = { version = "0.2.5", path = "../watermelon-net", default-features = false }
