@@ -98,6 +98,16 @@ impl ConsumerBatch {
     }
 }
 
+/// `409` conditions after which the batch can gracefully end and be requested again,
+/// as opposed to errors like `Consumer Deleted` or `Exceeded MaxRequestBatch of %d`
+fn is_graceful_conflict(msg: &ServerMessage) -> bool {
+    msg.status_description.as_deref().is_some_and(|desc| {
+        desc.eq_ignore_ascii_case("Batch Completed")
+            || desc.eq_ignore_ascii_case("Server Shutdown")
+            || desc.eq_ignore_ascii_case("Leadership Change")
+    })
+}
+
 impl Stream for ConsumerBatch {
     type Item = Result<JetstreamMessage, ConsumerBatchError>;
 
@@ -130,6 +140,10 @@ impl Stream for ConsumerBatch {
                     *this.pending_msgs = 0;
                     Poll::Ready(None)
                 }
+                Some(StatusCode::CONFLICT) if is_graceful_conflict(&msg) => {
+                    *this.pending_msgs = 0;
+                    Poll::Ready(None)
+                }
                 _ => Poll::Ready(Some(Err(ConsumerBatchError::UnexpectedStatus(msg)))),
             },
             Poll::Ready(Some(Err(err))) => {
@@ -147,5 +161,53 @@ impl Stream for ConsumerBatch {
 impl FusedStream for ConsumerBatch {
     fn is_terminated(&self) -> bool {
         self.pending_msgs == 0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use bytes::Bytes;
+    use watermelon_proto::{
+        MessageBase, ServerMessage, StatusCode, Subject, SubscriptionId, headers::HeaderMap,
+    };
+
+    use super::is_graceful_conflict;
+
+    fn conflict_msg(description: Option<&'static str>) -> ServerMessage {
+        ServerMessage {
+            status_code: Some(StatusCode::CONFLICT),
+            status_description: description.map(Into::into),
+            subscription_id: SubscriptionId::from(1),
+            base: MessageBase {
+                subject: Subject::from_static("_INBOX.abcd"),
+                reply_subject: None,
+                headers: HeaderMap::new(),
+                payload: Bytes::new(),
+            },
+        }
+    }
+
+    #[test]
+    fn graceful_conflicts() {
+        for description in ["Batch Completed", "Server Shutdown", "Leadership Change"] {
+            assert!(is_graceful_conflict(&conflict_msg(Some(description))));
+        }
+    }
+
+    #[test]
+    fn error_conflicts() {
+        for description in [
+            "Consumer Deleted",
+            "Consumer is push based",
+            "Exceeded MaxRequestBatch of 10",
+            "Exceeded MaxRequestExpires of 1m0s",
+            "Exceeded MaxRequestMaxBytes of 1024",
+            "Exceeded MaxWaiting",
+            "Message Size Exceeds MaxBytes",
+        ] {
+            assert!(!is_graceful_conflict(&conflict_msg(Some(description))));
+        }
+
+        assert!(!is_graceful_conflict(&conflict_msg(None)));
     }
 }
