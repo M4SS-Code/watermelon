@@ -40,7 +40,7 @@ watermelon-nkeys = { version = "0.1.6", path = "../watermelon-nkeys", default-fe
 thiserror = "2"
 
 [dev-dependencies]
-tokio = { version = "1.36", features = ["test-util"] }
+tokio = { version = "1.36", features = ["macros", "test-util"] }
 futures-util = { version = "0.3", default-features = false }
 claims = "0.8"
 
