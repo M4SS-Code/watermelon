@@ -7,7 +7,7 @@ use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use watermelon_proto::{
     StatusCode, Subject,
-    headers::{HeaderMap, HeaderName, HeaderValue},
+    headers::{HeaderMap, HeaderName, HeaderValue, error::HeaderValueValidateError},
 };
 
 use crate::{
@@ -338,7 +338,8 @@ pub(crate) async fn do_publish(
         expected_last_message_id.as_deref(),
         message_id.as_deref(),
         ttl,
-    );
+    )
+    .map_err(JetstreamError::HeaderValue)?;
 
     // Use the core client's request API — it handles reply subjects,
     // multiplexed subscriptions, and timeouts for us.
@@ -391,53 +392,54 @@ pub(crate) fn build_headers(
     expected_last_message_id: Option<&str>,
     message_id: Option<&str>,
     ttl: Option<u32>,
-) -> HeaderMap {
+) -> Result<HeaderMap, HeaderValueValidateError> {
     let mut headers = HeaderMap::new();
 
     if let Some(s) = stream {
         headers.insert(
             HeaderName::from_static("Nats-Stream"),
-            HeaderValue::from_dangerous_value(s.into()),
+            HeaderValue::from_bytes(s.as_bytes())?,
         );
     }
     if let Some(s) = expected_stream {
         headers.insert(
             HeaderName::from_static("Nats-Expected-Stream"),
-            HeaderValue::from_dangerous_value(s.into()),
+            HeaderValue::from_bytes(s.as_bytes())?,
         );
     }
     if let Some(seq) = expected_last_stream_sequence {
         headers.insert(
             HeaderName::from_static("Nats-Expected-Last-Sequence"),
-            HeaderValue::from_dangerous_value(seq.to_string().into()),
+            // Stringified integers are always valid header values
+            HeaderValue::from_dangerous_value(Bytes::from(seq.to_string())),
         );
     }
     if let Some(seq) = expected_last_subject_sequence {
         headers.insert(
             HeaderName::from_static("Nats-Expected-Last-Subject-Sequence"),
-            HeaderValue::from_dangerous_value(seq.to_string().into()),
+            HeaderValue::from_dangerous_value(Bytes::from(seq.to_string())),
         );
     }
     if let Some(id) = expected_last_message_id {
         headers.insert(
             HeaderName::from_static("Nats-Expected-Last-Message-Id"),
-            HeaderValue::from_dangerous_value(id.into()),
+            HeaderValue::from_bytes(id.as_bytes())?,
         );
     }
     if let Some(id) = message_id {
         headers.insert(
             HeaderName::from_static("Nats-Message-Id"),
-            HeaderValue::from_dangerous_value(id.into()),
+            HeaderValue::from_bytes(id.as_bytes())?,
         );
     }
     if let Some(t) = ttl {
         headers.insert(
             HeaderName::from_static("Nats-TTL"),
-            HeaderValue::from_dangerous_value(t.to_string().into()),
+            HeaderValue::from_dangerous_value(Bytes::from(t.to_string())),
         );
     }
 
-    headers
+    Ok(headers)
 }
 
 impl Debug for ClientJetstreamPublish<'_> {

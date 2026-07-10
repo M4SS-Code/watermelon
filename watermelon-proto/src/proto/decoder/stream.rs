@@ -220,12 +220,85 @@ mod tests {
     }
 
     #[test]
+    fn decode_hmsg_non_utf8_header_value() {
+        const HEADERS: &[u8] = b"NATS/1.0\r\nX-Binary: \x00\x80\xffabc\r\n\r\n";
+
+        let mut decoder = StreamDecoder::new();
+        decoder.read_buf().put_slice(
+            format!("HMSG _INBOX.abcd 9 {} {}\r\n", HEADERS.len(), HEADERS.len()).as_bytes(),
+        );
+        decoder.read_buf().put_slice(HEADERS);
+        decoder.read_buf().put_slice(b"\r\n");
+        assert_ok_eq!(
+            decoder.decode(),
+            Some(ServerOp::Message {
+                message: ServerMessage {
+                    status_code: None,
+                    status_description: None,
+                    subscription_id: 9.into(),
+                    base: MessageBase {
+                        subject: Subject::from_static("_INBOX.abcd"),
+                        reply_subject: None,
+                        headers: HeaderMap::from_iter([(
+                            HeaderName::from_static("X-Binary"),
+                            HeaderValue::from_bytes(b"\x00\x80\xffabc").unwrap(),
+                        )]),
+                        payload: Bytes::new(),
+                    }
+                }
+            })
+        );
+        assert_ok_eq!(decoder.decode(), None);
+    }
+
+    #[test]
+    fn decode_hmsg_empty_header_value() {
+        const HEADERS: &str = "NATS/1.0\r\nA:\r\nB: \r\n\r\n";
+
+        let mut decoder = StreamDecoder::new();
+        decoder.read_buf().put_slice(
+            format!(
+                "HMSG _INBOX.abcd 9 {} {}\r\n{HEADERS}\r\n",
+                HEADERS.len(),
+                HEADERS.len()
+            )
+            .as_bytes(),
+        );
+        assert_ok_eq!(
+            decoder.decode(),
+            Some(ServerOp::Message {
+                message: ServerMessage {
+                    status_code: None,
+                    status_description: None,
+                    subscription_id: 9.into(),
+                    base: MessageBase {
+                        subject: Subject::from_static("_INBOX.abcd"),
+                        reply_subject: None,
+                        headers: HeaderMap::from_iter([
+                            (
+                                HeaderName::from_static("A"),
+                                HeaderValue::from_bytes(b"").unwrap(),
+                            ),
+                            (
+                                HeaderName::from_static("B"),
+                                HeaderValue::from_bytes(b"").unwrap(),
+                            ),
+                        ]),
+                        payload: Bytes::new(),
+                    }
+                }
+            })
+        );
+        assert_ok_eq!(decoder.decode(), None);
+    }
+
+    #[test]
     fn head_too_long() {
         let mut decoder = StreamDecoder::new();
-        decoder.read_buf().put_bytes(0, 20000);
+        decoder.read_buf().put_bytes(0, 200_000);
         assert_matches!(
             decoder.decode(),
-            Err(DecoderError::HeadTooLong { len: 20000 })
+            Err(DecoderError::HeadTooLong { len: 200_000 })
         );
     }
 }

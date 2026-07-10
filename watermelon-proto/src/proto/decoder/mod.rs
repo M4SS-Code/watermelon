@@ -22,7 +22,13 @@ use super::ServerOp;
 mod framed;
 mod stream;
 
-const MAX_HEAD_LEN: usize = 16 * 1024;
+// Sanity limit for the length of `MSG`/`HMSG`/`INFO`/`-ERR` lines coming
+// from the server. The server's `max_control_line` (4096 by default) only
+// applies to lines sent by clients: routed/leafnode/gateway connections are
+// allowed arg lines of up to 16x that (64 KiB) and the server may grow
+// subjects further by rewriting them (e.g. `$JS.ACK` reply subjects and
+// gateway reply prefixes), so be generous here.
+const MAX_HEAD_LEN: usize = 128 * 1024;
 
 #[derive(Debug)]
 pub(super) enum DecoderStatus {
@@ -203,7 +209,7 @@ fn decode_msg(mut control_line: Bytes) -> Result<DecoderStatus, DecoderError> {
         SubscriptionId::from_ascii_bytes(&subscription_id).map_err(DecoderError::SubscriptionId)?;
     let reply_subject = reply_subject
         .map(|reply_subject| {
-            ByteString::try_from(reply_subject).map_err(|_| DecoderError::SubjectInvalidUtf8)
+            ByteString::try_from(reply_subject).map_err(|_| DecoderError::ReplySubjectInvalidUtf8)
         })
         .transpose()?
         .map(Subject::from_dangerous_value);
@@ -261,7 +267,7 @@ fn decode_hmsg(mut control_line: Bytes) -> Result<DecoderStatus, DecoderError> {
         SubscriptionId::from_ascii_bytes(&subscription_id).map_err(DecoderError::SubscriptionId)?;
     let reply_subject = reply_subject
         .map(|reply_subject| {
-            ByteString::try_from(reply_subject).map_err(|_| DecoderError::SubjectInvalidUtf8)
+            ByteString::try_from(reply_subject).map_err(|_| DecoderError::ReplySubjectInvalidUtf8)
         })
         .transpose()?
         .map(Subject::from_dangerous_value);
@@ -333,7 +339,7 @@ fn decode_headers(
 
             let name = line.split_to(i);
             line.advance(":".len());
-            if line[0].is_ascii_whitespace() {
+            if line.first().is_some_and(u8::is_ascii_whitespace) {
                 // The fact that this is allowed sounds like BS to me
                 line.advance(1);
             }
@@ -343,10 +349,7 @@ fn decode_headers(
                 ByteString::try_from(name).map_err(|_| DecoderError::HeaderNameInvalidUtf8)?,
             )
             .map_err(DecoderError::HeaderName)?;
-            let value = HeaderValue::try_from(
-                ByteString::try_from(value).map_err(|_| DecoderError::HeaderValueInvalidUtf8)?,
-            )
-            .map_err(DecoderError::HeaderValue)?;
+            let value = HeaderValue::from_bytes(&value).map_err(DecoderError::HeaderValue)?;
             Ok((name, value))
         })
         .collect::<Result<_, _>>()?;
@@ -399,8 +402,6 @@ pub enum DecoderError {
     HeaderNameInvalidUtf8,
     #[error("The header name couldn't be parsed")]
     HeaderName(#[source] HeaderNameValidateError),
-    #[error("The header value isn't valid utf-8")]
-    HeaderValueInvalidUtf8,
     #[error("The header value couldn't be parsed")]
     HeaderValue(#[source] HeaderValueValidateError),
     #[error("INFO command JSON payload couldn't be deserialized")]

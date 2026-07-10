@@ -14,15 +14,13 @@ use bytestring::ByteString;
 /// contain a valid header name that meets the following requirements:
 ///
 /// * The value is not empty
-/// * The value has a length less than or equal to 64 [^2]
-/// * The value does not contain any whitespace characters or `:`
+/// * The value does not contain bytes ≥ 0x80, `\r`, `\n`, or `:`
 ///
 /// `HeaderName` can be constructed from [`HeaderName::from_static`]
 /// or any of the `TryFrom` implementations.
 ///
 /// [^1]: Because [`HeaderName::from_dangerous_value`] is safe to call,
 ///       unsafe code must not assume any of the above invariants.
-/// [^2]: Messages coming from the NATS server are allowed to violate this rule.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct HeaderName(UniCase<ByteString>);
 
@@ -170,11 +168,8 @@ pub enum HeaderNameValidateError {
     /// The value is empty
     #[error("HeaderName is empty")]
     Empty,
-    /// The value has a length greater than 64
-    #[error("HeaderName is too long")]
-    TooLong,
-    /// The value contains an Unicode whitespace character or `:`
-    #[error("HeaderName contained an illegal whitespace character")]
+    /// The value contains an illegal character
+    #[error("HeaderName contained an illegal character")]
     IllegalCharacter,
 }
 
@@ -183,15 +178,18 @@ fn validate_header_name(header_name: &str) -> Result<(), HeaderNameValidateError
         return Err(HeaderNameValidateError::Empty);
     }
 
-    if header_name.len() > 64 {
-        // This is an arbitrary limit, but I guess the server must also have one
-        return Err(HeaderNameValidateError::TooLong);
-    }
-
-    if header_name.chars().any(|c| c.is_whitespace() || c == ':') {
-        // The theoretical security limit is just ` `, `\t`, `\r`, `\n` and `:`.
-        // Let's be more careful.
-        return Err(HeaderNameValidateError::IllegalCharacter);
+    for b in header_name.bytes() {
+        match b {
+            // The NATS server relays header names verbatim without validating
+            // them, but Go's `textproto.ReadMIMEHeader` (used by `nats.go` to
+            // parse received headers) errors out on bytes >= 0x80. Rejecting
+            // them also keeps `HeaderName` ASCII, making the case-insensitive
+            // comparison well defined.
+            b if b >= 0x80 => return Err(HeaderNameValidateError::IllegalCharacter),
+            // Wire protocol constraints: line terminators and name/value separator
+            b'\r' | b'\n' | b':' => return Err(HeaderNameValidateError::IllegalCharacter),
+            _ => {}
+        }
     }
 
     Ok(())
@@ -200,8 +198,11 @@ fn validate_header_name(header_name: &str) -> Result<(), HeaderNameValidateError
 #[cfg(test)]
 mod tests {
     use core::cmp::Ordering;
+    use core::str::FromStr;
 
-    use super::HeaderName;
+    use claims::assert_matches;
+
+    use super::{HeaderName, HeaderNameValidateError};
 
     #[test]
     fn eq() {
@@ -209,5 +210,31 @@ mod tests {
         let lowercase = HeaderName::from_static("nats-message-id");
         assert_eq!(cased, lowercase);
         assert_eq!(cased.cmp(&lowercase), Ordering::Equal);
+    }
+
+    #[test]
+    fn valid_header_names() {
+        let names = ["Nats-Msg-Id", "a", "X-Custom-Header", "Header Name"];
+        for name in names {
+            let header_name = HeaderName::from_str(name).unwrap();
+            assert_eq!(header_name.as_str(), name);
+        }
+    }
+
+    #[test]
+    fn invalid_header_names() {
+        assert_matches!(
+            HeaderName::from_str(""),
+            Err(HeaderNameValidateError::Empty)
+        );
+
+        let names = [":", "name:", "na:me", "name\r", "na\nme", "nàme"];
+        for name in names {
+            assert_matches!(
+                HeaderName::from_str(name),
+                Err(HeaderNameValidateError::IllegalCharacter),
+                "{name:?}"
+            );
+        }
     }
 }

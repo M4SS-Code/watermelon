@@ -8,5 +8,5 @@ mod value;
 
 pub mod error {
     pub use super::name::HeaderNameValidateError;
-    pub use super::value::HeaderValueValidateError;
+    pub use super::value::{HeaderValueToStrError, HeaderValueValidateError};
 }

@@ -11,18 +11,16 @@ use bytestring::ByteString;
 /// A string that can be used to represent an queue group
 ///
 /// `QueueGroup` contains a string that is guaranteed [^1] to
-/// contain a valid header name that meets the following requirements:
+/// contain a valid queue group that meets the following requirements:
 ///
 /// * The value is not empty
-/// * The value has a length less than or equal to 64 [^2]
-/// * The value does not contain any whitespace characters or `:`
+/// * The value does not contain ` `, `\t`, `\r` or `\n`
 ///
 /// `QueueGroup` can be constructed from [`QueueGroup::from_static`]
 /// or any of the `TryFrom` implementations.
 ///
 /// [^1]: Because [`QueueGroup::from_dangerous_value`] is safe to call,
 ///       unsafe code must not assume any of the above invariants.
-/// [^2]: Messages coming from the NATS server are allowed to violate this rule.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct QueueGroup(ByteString);
 
@@ -148,11 +146,8 @@ pub enum QueueGroupValidateError {
     /// The value is empty
     #[error("QueueGroup is empty")]
     Empty,
-    /// The value has a length greater than 64
-    #[error("QueueGroup is too long")]
-    TooLong,
-    /// The value contains an Unicode whitespace character
-    #[error("QueueGroup contained an illegal whitespace character")]
+    /// The value contains ` `, `\t`, `\r` or `\n`
+    #[error("QueueGroup contained an illegal character")]
     IllegalCharacter,
 }
 
@@ -161,15 +156,15 @@ fn validate_queue_group(queue_group: &str) -> Result<(), QueueGroupValidateError
         return Err(QueueGroupValidateError::Empty);
     }
 
-    if queue_group.len() > 64 {
-        // This is an arbitrary limit, but I guess the server must also have one
-        return Err(QueueGroupValidateError::TooLong);
-    }
-
-    if queue_group.chars().any(char::is_whitespace) {
-        // The theoretical security limit is just ` `, `\t`, `\r` and `\n`.
-        // Let's be more careful.
-        return Err(QueueGroupValidateError::IllegalCharacter);
+    for b in queue_group.bytes() {
+        // The server accepts almost any bytes and does not enforce a
+        // per-queue-group length limit. The queue group is however written
+        // to the wire inside the whitespace delimited `SUB` control line,
+        // so ` ` and `\t` would be interpreted as an argument separator and
+        // `\r`/`\n` would terminate the control line early.
+        if b == b' ' || b == b'\t' || b == b'\r' || b == b'\n' {
+            return Err(QueueGroupValidateError::IllegalCharacter);
+        }
     }
 
     Ok(())
@@ -194,10 +189,6 @@ mod tests {
     fn invalid_queue_groups() {
         let queue_groups = [
             ("", QueueGroupValidateError::Empty),
-            (
-                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-                QueueGroupValidateError::TooLong,
-            ),
             ("importer ", QueueGroupValidateError::IllegalCharacter),
             ("importer .thing", QueueGroupValidateError::IllegalCharacter),
             (" importer", QueueGroupValidateError::IllegalCharacter),
@@ -211,23 +202,11 @@ mod tests {
                 QueueGroupValidateError::IllegalCharacter,
             ),
             (
-                "importer.thing.works\n",
-                QueueGroupValidateError::IllegalCharacter,
-            ),
-            (
                 "importer.thing.works\t",
                 QueueGroupValidateError::IllegalCharacter,
             ),
             (
                 "importer.thi ng.works",
-                QueueGroupValidateError::IllegalCharacter,
-            ),
-            (
-                "importer.thi\rng.works",
-                QueueGroupValidateError::IllegalCharacter,
-            ),
-            (
-                "importer.thi\nng.works",
                 QueueGroupValidateError::IllegalCharacter,
             ),
             (
@@ -239,6 +218,24 @@ mod tests {
                 QueueGroupValidateError::IllegalCharacter,
             ),
             (
+                "importer.thing\t.works",
+                QueueGroupValidateError::IllegalCharacter,
+            ),
+            (" ", QueueGroupValidateError::IllegalCharacter),
+            ("\t", QueueGroupValidateError::IllegalCharacter),
+            (
+                "importer.thing.works\n",
+                QueueGroupValidateError::IllegalCharacter,
+            ),
+            (
+                "importer.thi\rng.works",
+                QueueGroupValidateError::IllegalCharacter,
+            ),
+            (
+                "importer.thi\nng.works",
+                QueueGroupValidateError::IllegalCharacter,
+            ),
+            (
                 "importer.thing\r.works",
                 QueueGroupValidateError::IllegalCharacter,
             ),
@@ -246,14 +243,8 @@ mod tests {
                 "importer.thing\n.works",
                 QueueGroupValidateError::IllegalCharacter,
             ),
-            (
-                "importer.thing\t.works",
-                QueueGroupValidateError::IllegalCharacter,
-            ),
-            (" ", QueueGroupValidateError::IllegalCharacter),
             ("\r", QueueGroupValidateError::IllegalCharacter),
             ("\n", QueueGroupValidateError::IllegalCharacter),
-            ("\t", QueueGroupValidateError::IllegalCharacter),
         ];
         for (queue_group, expected_err) in queue_groups {
             let err = QueueGroup::try_from(ByteString::from_static(queue_group)).unwrap_err();

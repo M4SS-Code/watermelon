@@ -14,8 +14,7 @@ use bytestring::ByteString;
 /// contain a valid subject that meets the following requirements:
 ///
 /// * The value is not empty
-/// * The value has a length less than or equal to 256 [^2]
-/// * The value does not contain any whitespace characters or `:`
+/// * The value does not contain ` `, `\t`, `\r` or `\n`
 /// * The value does not contain wrongly placed `*` or `>` characters
 ///
 /// `Subject` can be constructed from [`Subject::from_static`]
@@ -23,7 +22,6 @@ use bytestring::ByteString;
 ///
 /// [^1]: Because [`Subject::from_dangerous_value`] is safe to call,
 ///       unsafe code must not assume any of the above invariants.
-/// [^2]: Messages coming from the NATS server are allowed to violate this rule.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Subject(ByteString);
 
@@ -149,11 +147,8 @@ pub enum SubjectValidateError {
     /// The value is empty
     #[error("Subject is empty")]
     Empty,
-    /// The value has a length greater than 256
-    #[error("Subject is too long")]
-    TooLong,
-    /// The value contains an Unicode whitespace character
-    #[error("Subject contained an illegal whitespace character")]
+    /// The value contains ` `, `\t`, `\r` or `\n`
+    #[error("Subject contained an illegal character")]
     IllegalCharacter,
     /// The value contains consecutive `.` characters
     #[error("Subject contained a broken token")]
@@ -169,15 +164,17 @@ fn validate_subject(subject: &str) -> Result<(), SubjectValidateError> {
         return Err(SubjectValidateError::Empty);
     }
 
-    if subject.len() > 256 {
-        // This is an arbitrary limit, but I guess the server must also have one
-        return Err(SubjectValidateError::TooLong);
-    }
-
-    if subject.chars().any(char::is_whitespace) {
-        // The theoretical security limit is just ` `, `\t`, `\r` and `\n`.
-        // Let's be more careful.
-        return Err(SubjectValidateError::IllegalCharacter);
+    for b in subject.bytes() {
+        // The server accepts almost any bytes via IsValidSubject
+        // (checkRunes=false) and does not enforce a per-subject length limit
+        // beyond the maximum control line length. The subject is however
+        // written to the wire inside whitespace delimited control lines
+        // (e.g. `PUB <subject> <size>\r\n`), so ` ` and `\t` would be
+        // interpreted as an argument separator and `\r`/`\n` would terminate
+        // the control line early.
+        if b == b' ' || b == b'\t' || b == b'\r' || b == b'\n' {
+            return Err(SubjectValidateError::IllegalCharacter);
+        }
     }
 
     let mut tokens = subject.split('.').peekable();
@@ -224,10 +221,6 @@ mod tests {
     fn invalid_subjects() {
         let subjects = [
             ("", SubjectValidateError::Empty),
-            (
-                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-                SubjectValidateError::TooLong,
-            ),
             ("cmd ", SubjectValidateError::IllegalCharacter),
             ("cmd .endpoint", SubjectValidateError::IllegalCharacter),
             (" cmd", SubjectValidateError::IllegalCharacter),
@@ -241,23 +234,11 @@ mod tests {
                 SubjectValidateError::IllegalCharacter,
             ),
             (
-                "cmd.endpoint.detail\n",
-                SubjectValidateError::IllegalCharacter,
-            ),
-            (
                 "cmd.endpoint.detail\t",
                 SubjectValidateError::IllegalCharacter,
             ),
             (
                 "cmd.endp oint.detail",
-                SubjectValidateError::IllegalCharacter,
-            ),
-            (
-                "cmd.endp\roint.detail",
-                SubjectValidateError::IllegalCharacter,
-            ),
-            (
-                "cmd.endp\noint.detail",
                 SubjectValidateError::IllegalCharacter,
             ),
             (
@@ -269,6 +250,24 @@ mod tests {
                 SubjectValidateError::IllegalCharacter,
             ),
             (
+                "cmd.endpoint\t.detail",
+                SubjectValidateError::IllegalCharacter,
+            ),
+            (" ", SubjectValidateError::IllegalCharacter),
+            ("\t", SubjectValidateError::IllegalCharacter),
+            (
+                "cmd.endpoint.detail\n",
+                SubjectValidateError::IllegalCharacter,
+            ),
+            (
+                "cmd.endp\roint.detail",
+                SubjectValidateError::IllegalCharacter,
+            ),
+            (
+                "cmd.endp\noint.detail",
+                SubjectValidateError::IllegalCharacter,
+            ),
+            (
                 "cmd.endpoint\r.detail",
                 SubjectValidateError::IllegalCharacter,
             ),
@@ -276,14 +275,8 @@ mod tests {
                 "cmd.endpoint\n.detail",
                 SubjectValidateError::IllegalCharacter,
             ),
-            (
-                "cmd.endpoint\t.detail",
-                SubjectValidateError::IllegalCharacter,
-            ),
-            (" ", SubjectValidateError::IllegalCharacter),
             ("\r", SubjectValidateError::IllegalCharacter),
             ("\n", SubjectValidateError::IllegalCharacter),
-            ("\t", SubjectValidateError::IllegalCharacter),
             ("cmd..endpoint", SubjectValidateError::BrokenToken),
             (".cmd.endpoint", SubjectValidateError::BrokenToken),
             ("cmd.endpoint.", SubjectValidateError::BrokenToken),

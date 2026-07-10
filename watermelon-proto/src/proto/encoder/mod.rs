@@ -86,7 +86,7 @@ pub(super) fn encode<E: FrameEncoder>(encoder: &mut E, item: &ClientOp) {
                 encoder.small_write(b"\r\n");
 
                 encode_headers(headers).for_each(|s| {
-                    encoder.small_write(s.as_bytes());
+                    encoder.small_write(s);
                 });
             }
 
@@ -158,12 +158,14 @@ impl AsRef<[u8]> for IntoBytes<'_> {
     }
 }
 
-fn encode_headers(headers: &HeaderMap) -> impl Iterator<Item = &'_ str> {
-    let head = ["NATS/1.0\r\n"];
+fn encode_headers(headers: &HeaderMap) -> impl Iterator<Item = &'_ [u8]> {
+    let head: &[u8] = b"NATS/1.0\r\n";
     let headers = headers.iter().flat_map(|(name, values)| {
-        values.flat_map(|value| [name.as_str(), ": ", value.as_str(), "\r\n"])
+        values.flat_map(|value| [name.as_str().as_bytes(), b": ", value.as_bytes(), b"\r\n"])
     });
-    let footer = ["\r\n"];
+    let footer: &[u8] = b"\r\n";
 
-    head.into_iter().chain(headers).chain(footer)
+    core::iter::once(head)
+        .chain(headers)
+        .chain(core::iter::once(footer))
 }

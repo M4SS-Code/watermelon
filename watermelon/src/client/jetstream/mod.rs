@@ -6,6 +6,7 @@ use resources::Response;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use watermelon_proto::StatusCode;
+use watermelon_proto::headers::error::HeaderValueValidateError;
 use watermelon_proto::{Subject, error::SubjectValidateError};
 
 pub use self::commands::{
@@ -61,6 +62,8 @@ pub struct JetstreamErrorCode(u16);
 pub enum JetstreamError {
     #[error("invalid subject")]
     Subject(#[source] SubjectValidateError),
+    #[error("invalid header value")]
+    HeaderValue(#[source] HeaderValueValidateError),
     #[error("client closed")]
     ClientClosed(#[source] ClientClosedError),
     #[error("client request failure")]
