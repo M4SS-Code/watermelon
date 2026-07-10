@@ -153,6 +153,8 @@ struct RawConsumerConfig {
     #[serde(default, skip_serializing_if = "Vec::is_empty", with = "duration_vec")]
     backoff: Vec<Duration>,
 
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    filter_subject: Option<Subject>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     filter_subjects: Vec<Subject>,
     replay_policy: ReplayPolicy,
@@ -204,7 +206,13 @@ impl Serialize for ConsumerConfig {
             ConsumerDurability::Durable => (self.name.clone(), self.name.clone()),
         };
 
-        let filter_subjects = self.filter_subjects.clone();
+        // A single filter must be serialized via the singular `filter_subject`:
+        // the server rejects the subject based create API when the plural
+        // `filter_subjects` is set, no matter how many entries it contains
+        let (filter_subject, filter_subjects) = match &*self.filter_subjects {
+            [filter_subject] => (Some(filter_subject.clone()), Vec::new()),
+            _ => (None, self.filter_subjects.clone()),
+        };
 
         let (
             max_waiting,
@@ -257,6 +265,7 @@ impl Serialize for ConsumerConfig {
             ack_policy: self.ack_policy,
             max_deliver: self.max_deliver,
             backoff: self.backoff.clone(),
+            filter_subject,
             filter_subjects,
             replay_policy: self.replay_policy,
             rate_limit: self.rate_limit,
@@ -293,6 +302,7 @@ impl<'de> Deserialize<'de> for ConsumerConfig {
             ack_policy,
             max_deliver,
             backoff,
+            filter_subject,
             filter_subjects,
             replay_policy,
             rate_limit,
@@ -310,6 +320,17 @@ impl<'de> Deserialize<'de> for ConsumerConfig {
             storage,
             metadata,
         } = RawConsumerConfig::deserialize(deserializer)?;
+        let filter_subjects = match (filter_subject, filter_subjects) {
+            (Some(filter_subject), filter_subjects) if filter_subjects.is_empty() => {
+                vec![filter_subject]
+            }
+            (None, filter_subjects) => filter_subjects,
+            (Some(_), _) => {
+                return Err(de::Error::custom(
+                    "consumer has both filter_subject and filter_subjects set",
+                ));
+            }
+        };
         let (durability, name) = if !durable_name.is_empty() {
             (ConsumerDurability::Durable, durable_name)
         } else if !name.is_empty() {
@@ -393,4 +414,101 @@ impl Default for AckPolicy {
 #[expect(clippy::trivially_copy_pass_by_ref, reason = "serde works this way")]
 fn is_false(val: &bool) -> bool {
     !*val
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{collections::BTreeMap, time::Duration};
+
+    use serde_json::json;
+    use watermelon_proto::Subject;
+
+    use super::{
+        AckPolicy, ConsumerConfig, ConsumerDurability, ConsumerSpecificConfig, ConsumerStorage,
+        DeliverPolicy, ReplayPolicy,
+    };
+
+    fn config(filter_subjects: Vec<Subject>) -> ConsumerConfig {
+        ConsumerConfig {
+            durability: ConsumerDurability::Durable,
+            name: "test".to_owned(),
+            description: String::new(),
+            deliver_policy: DeliverPolicy::All,
+            // `Some`: the serialized form always contains `max_ack_pending` and
+            // `max_deliver`, mirroring the NATS Server which sets defaults for both
+            ack_policy: AckPolicy::Explicit {
+                wait: Duration::from_secs(30),
+                max_pending: Some(1000),
+            },
+            max_deliver: Some(3),
+            backoff: Vec::new(),
+            filter_subjects,
+            replay_policy: ReplayPolicy::Instant,
+            rate_limit: None,
+            headers_only: false,
+            specs: ConsumerSpecificConfig::Pull {
+                max_waiting: None,
+                max_request_batch: None,
+                max_request_expires: Duration::ZERO,
+                max_request_max_bytes: None,
+            },
+            inactive_threshold: Duration::ZERO,
+            replicas: None,
+            storage: ConsumerStorage::Disk,
+            metadata: BTreeMap::new(),
+        }
+    }
+
+    #[test]
+    fn no_filters() {
+        let value = serde_json::to_value(config(Vec::new())).unwrap();
+        assert_eq!(None, value.get("filter_subject"));
+        assert_eq!(None, value.get("filter_subjects"));
+
+        let config = serde_json::from_value::<ConsumerConfig>(value).unwrap();
+        assert!(config.filter_subjects.is_empty());
+    }
+
+    #[test]
+    fn single_filter_uses_singular_field() {
+        let value = serde_json::to_value(config(vec![Subject::from_static("orders.new")])).unwrap();
+        assert_eq!(Some(&json!("orders.new")), value.get("filter_subject"));
+        assert_eq!(None, value.get("filter_subjects"));
+
+        let config = serde_json::from_value::<ConsumerConfig>(value).unwrap();
+        assert_eq!(
+            vec![Subject::from_static("orders.new")],
+            config.filter_subjects
+        );
+    }
+
+    #[test]
+    fn multiple_filters_use_plural_field() {
+        let filter_subjects = vec![
+            Subject::from_static("orders.new"),
+            Subject::from_static("orders.shipped"),
+        ];
+
+        let value = serde_json::to_value(config(filter_subjects.clone())).unwrap();
+        assert_eq!(None, value.get("filter_subject"));
+        assert_eq!(
+            Some(&json!(["orders.new", "orders.shipped"])),
+            value.get("filter_subjects")
+        );
+
+        let config = serde_json::from_value::<ConsumerConfig>(value).unwrap();
+        assert_eq!(filter_subjects, config.filter_subjects);
+    }
+
+    #[test]
+    fn both_filter_fields_are_rejected() {
+        let mut value =
+            serde_json::to_value(config(vec![Subject::from_static("orders.new")])).unwrap();
+        value
+            .as_object_mut()
+            .unwrap()
+            .insert("filter_subjects".to_owned(), json!(["orders.shipped"]));
+
+        assert!(serde_json::from_value::<ConsumerConfig>(value).is_err());
+    }
 }
