@@ -54,10 +54,12 @@ mod tests {
     use bytes::{BufMut as _, Bytes};
     use claims::{assert_matches, assert_ok_eq};
 
+    use bytestring::ByteString;
+
     use crate::{
-        Subject,
+        StatusCode, Subject,
         error::ServerError,
-        headers::HeaderMap,
+        headers::{HeaderMap, HeaderName, HeaderValue},
         message::{MessageBase, ServerMessage},
         proto::{error::DecoderError, server::ServerOp},
     };
@@ -114,6 +116,7 @@ mod tests {
             Some(ServerOp::Message {
                 message: ServerMessage {
                     status_code: None,
+                    status_description: None,
                     subscription_id: 1.into(),
                     base: MessageBase {
                         subject: Subject::from_static("hello.world"),
@@ -125,6 +128,95 @@ mod tests {
             })
         );
         assert_ok_eq!(decoder.decode(), None);
+    }
+
+    #[test]
+    fn decode_hmsg_status_description() {
+        const HEADERS: &str = "NATS/1.0 409 Batch Completed\r\nNats-Pending-Messages: 3\r\nNats-Pending-Bytes: 0\r\n\r\n";
+
+        let mut decoder = StreamDecoder::new();
+        decoder.read_buf().put_slice(
+            format!(
+                "HMSG _INBOX.abcd 9 {} {}\r\n{HEADERS}\r\n",
+                HEADERS.len(),
+                HEADERS.len()
+            )
+            .as_bytes(),
+        );
+        assert_ok_eq!(
+            decoder.decode(),
+            Some(ServerOp::Message {
+                message: ServerMessage {
+                    status_code: Some(StatusCode::CONFLICT),
+                    status_description: Some(ByteString::from_static("Batch Completed")),
+                    subscription_id: 9.into(),
+                    base: MessageBase {
+                        subject: Subject::from_static("_INBOX.abcd"),
+                        reply_subject: None,
+                        headers: HeaderMap::from_iter([
+                            (
+                                HeaderName::from_static("Nats-Pending-Messages"),
+                                HeaderValue::from_static("3")
+                            ),
+                            (
+                                HeaderName::from_static("Nats-Pending-Bytes"),
+                                HeaderValue::from_static("0")
+                            ),
+                        ]),
+                        payload: Bytes::new(),
+                    }
+                }
+            })
+        );
+        assert_ok_eq!(decoder.decode(), None);
+    }
+
+    #[test]
+    fn decode_hmsg_status_without_description() {
+        const HEADERS: &str = "NATS/1.0 100\r\n\r\n";
+
+        let mut decoder = StreamDecoder::new();
+        decoder.read_buf().put_slice(
+            format!(
+                "HMSG _INBOX.abcd 9 {} {}\r\n{HEADERS}\r\n",
+                HEADERS.len(),
+                HEADERS.len()
+            )
+            .as_bytes(),
+        );
+        assert_ok_eq!(
+            decoder.decode(),
+            Some(ServerOp::Message {
+                message: ServerMessage {
+                    status_code: Some(StatusCode::IDLE_HEARTBEAT),
+                    status_description: None,
+                    subscription_id: 9.into(),
+                    base: MessageBase {
+                        subject: Subject::from_static("_INBOX.abcd"),
+                        reply_subject: None,
+                        headers: HeaderMap::new(),
+                        payload: Bytes::new(),
+                    }
+                }
+            })
+        );
+        assert_ok_eq!(decoder.decode(), None);
+    }
+
+    #[test]
+    fn decode_hmsg_status_invalid_description_separator() {
+        const HEADERS: &str = "NATS/1.0 409XBatch Completed\r\n\r\n";
+
+        let mut decoder = StreamDecoder::new();
+        decoder.read_buf().put_slice(
+            format!(
+                "HMSG _INBOX.abcd 9 {} {}\r\n{HEADERS}\r\n",
+                HEADERS.len(),
+                HEADERS.len()
+            )
+            .as_bytes(),
+        );
+        assert_matches!(decoder.decode(), Err(DecoderError::InvalidHead));
     }
 
     #[test]

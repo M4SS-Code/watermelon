@@ -1,4 +1,5 @@
 use bytes::Bytes;
+use bytestring::ByteString;
 
 use crate::{StatusCode, Subject, headers::HeaderMap, subscription_id::SubscriptionId};
 
@@ -13,6 +14,12 @@ pub struct MessageBase {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ServerMessage {
     pub status_code: Option<StatusCode>,
+    /// The human readable description following [`Self::status_code`]
+    ///
+    /// Some status codes, like `409`, are used by the NATS Server for
+    /// multiple unrelated conditions which can only be told apart
+    /// via this description.
+    pub status_description: Option<ByteString>,
     pub subscription_id: SubscriptionId,
     pub base: MessageBase,
 }

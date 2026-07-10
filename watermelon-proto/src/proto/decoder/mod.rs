@@ -41,6 +41,7 @@ pub(super) enum DecoderStatus {
         subject: Subject,
         reply_subject: Option<Subject>,
         status_code: Option<StatusCode>,
+        status_description: Option<ByteString>,
         headers: HeaderMap,
         payload_len: usize,
     },
@@ -146,6 +147,7 @@ pub(super) fn decode(
                     subject,
                     reply_subject,
                     status_code,
+                    status_description,
                     headers,
                     payload_len,
                 } = mem::replace(status, DecoderStatus::ControlLine { last_bytes_read: 0 })
@@ -157,6 +159,7 @@ pub(super) fn decode(
                 read_buf.advance("\r\n".len());
                 let message = ServerMessage {
                     status_code,
+                    status_description,
                     subscription_id,
                     base: MessageBase {
                         subject,
@@ -211,6 +214,7 @@ fn decode_msg(mut control_line: Bytes) -> Result<DecoderStatus, DecoderError> {
         subject,
         reply_subject,
         status_code: None,
+        status_description: None,
         headers: HeaderMap::new(),
         payload_len,
     })
@@ -296,13 +300,30 @@ fn decode_headers(
     let header = read_buf.split_to(header_len);
     let mut lines = util::lines_iter(crlf, header);
     let head = lines.next().ok_or(DecoderError::MissingHead)?;
-    let head = head
+    let status_line = head
         .strip_prefix(b"NATS/1.0")
         .ok_or(DecoderError::InvalidHead)?;
-    let status_code = if let Some(status_code) = head.get(1..4) {
+    let status_code = if let Some(status_code) = status_line.get(1..4) {
         Some(StatusCode::from_ascii_bytes(status_code).map_err(DecoderError::StatusCode)?)
     } else {
         None
+    };
+    let status_description = match status_line.get(4..) {
+        Some([separator, description @ ..]) => {
+            if !separator.is_ascii_whitespace() {
+                return Err(DecoderError::InvalidHead);
+            }
+
+            match description.trim_ascii() {
+                [] => None,
+                description => Some(
+                    // `description` is a subslice of `head`, making this conversion zero-copy
+                    ByteString::try_from(head.slice_ref(description))
+                        .map_err(|_| DecoderError::StatusDescriptionInvalidUtf8)?,
+                ),
+            }
+        }
+        _ => None,
     };
 
     let headers = lines
@@ -335,6 +356,7 @@ fn decode_headers(
         subject,
         reply_subject,
         status_code,
+        status_description,
         headers,
         payload_len,
     };
@@ -371,6 +393,8 @@ pub enum DecoderError {
     InvalidHeaderLine,
     #[error("Couldn't parse the status code")]
     StatusCode(#[source] StatusCodeError),
+    #[error("The status description isn't valid utf-8")]
+    StatusDescriptionInvalidUtf8,
     #[error("The header name isn't valid utf-8")]
     HeaderNameInvalidUtf8,
     #[error("The header name couldn't be parsed")]

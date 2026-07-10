@@ -224,6 +224,7 @@ mod tests {
             let msgs = (0..num_messages)
                 .map(|num| ServerMessage {
                     status_code: Some(StatusCode::OK),
+                    status_description: None,
                     subscription_id: SubscriptionId::from(1),
                     base: MessageBase {
                         subject: format!("abcd.{num}").try_into().unwrap(),

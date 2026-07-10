@@ -30,6 +30,19 @@ impl StatusCode {
     pub const NOT_FOUND: StatusCode = Self::new_internal(404);
     /// The pull consumer batch reached the timeout
     pub const TIMEOUT: StatusCode = Self::new_internal(408);
+    /// The pull consumer batch has been terminated by the server
+    ///
+    /// This status code is used by the NATS Server for multiple unrelated
+    /// conditions, which can only be told apart via
+    /// [`ServerMessage::status_description`]. Known descriptions include
+    /// `Batch Completed`, `Server Shutdown`, `Leadership Change`,
+    /// `Consumer Deleted`, `Consumer is push based`,
+    /// `Exceeded MaxRequestBatch of %d`, `Exceeded MaxRequestExpires of %v`,
+    /// `Exceeded MaxRequestMaxBytes of %v`, `Exceeded MaxWaiting` and
+    /// `Message Size Exceeds MaxBytes`.
+    ///
+    /// [`ServerMessage::status_description`]: crate::ServerMessage::status_description
+    pub const CONFLICT: StatusCode = Self::new_internal(409);
     /// The request was sent to a subject that does not appear to have any subscribers listening
     pub const NO_RESPONDERS: StatusCode = Self::new_internal(503);
 
