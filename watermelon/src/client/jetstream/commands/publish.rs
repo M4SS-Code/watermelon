@@ -42,6 +42,7 @@ pub struct PubAck {
     /// The stream the message was published to.
     pub stream: String,
     /// The sequence number of the message in the stream.
+    #[serde(rename = "seq")]
     pub sequence: u64,
     /// The domain (if applicable).
     #[serde(default)]
