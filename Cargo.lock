@@ -1326,7 +1326,7 @@ dependencies = [
 
 [[package]]
 name = "watermelon"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "arc-swap",
  "bytes",
