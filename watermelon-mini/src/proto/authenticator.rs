@@ -16,17 +16,17 @@ pub enum AuthenticationError {
 
 #[derive(Debug, thiserror::Error)]
 pub enum CredsParseError {
-    #[error("contents are truncated")]
+    #[error("credentials are truncated")]
     Truncated,
-    #[error("missing closing for JWT")]
+    #[error("credentials are missing the JWT closing marker")]
     MissingJwtClosing,
-    #[error("missing closing for nkey")]
+    #[error("credentials are missing the nkey closing marker")]
     MissingNkeyClosing,
-    #[error("missing JWT")]
+    #[error("credentials are missing the JWT")]
     MissingJwt,
-    #[error("missing nkey")]
+    #[error("credentials are missing the nkey")]
     MissingNkey,
-    #[error("invalid nkey")]
+    #[error("credentials contain an invalid nkey")]
     InvalidKey(#[source] KeyPairFromSeedError),
 }
 
