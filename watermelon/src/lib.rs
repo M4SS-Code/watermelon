@@ -43,7 +43,7 @@ pub mod core {
             client::{ClientClosedError, ResponseError, TryCommandError},
             handler::ConnectHandlerError,
         };
-        pub use watermelon_mini::ConnectError;
+        pub use watermelon_mini::{ConnectError, CredsParseError};
     }
 }
 

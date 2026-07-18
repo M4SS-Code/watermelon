@@ -15,7 +15,7 @@ use watermelon_proto::{ServerAddr, ServerInfo};
 pub use self::non_standard_zstd::ZstdStream;
 use self::proto::connect;
 pub use self::proto::{
-    AuthenticationMethod, ConnectError, ConnectionCompression, ConnectionSecurity,
+    AuthenticationMethod, ConnectError, ConnectionCompression, ConnectionSecurity, CredsParseError,
 };
 
 #[cfg(feature = "non-standard-zstd")]
