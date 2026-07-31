@@ -203,7 +203,7 @@ mod tests {
     fn manual() {
         let mut headers = HeaderMap::new();
         headers.append(
-            HeaderName::from_static("Nats-Message-Id"),
+            HeaderName::from_static("Nats-Msg-Id"),
             HeaderValue::from_static("abcd"),
         );
         headers.append(
@@ -211,7 +211,7 @@ mod tests {
             HeaderValue::from_static("1"),
         );
         headers.append(
-            HeaderName::from_static("Nats-Message-Id"),
+            HeaderName::from_static("Nats-Msg-Id"),
             HeaderValue::from_static("1234"),
         );
         headers.append(
@@ -227,7 +227,7 @@ mod tests {
     fn collect() {
         let headers = [
             (
-                HeaderName::from_static("Nats-Message-Id"),
+                HeaderName::from_static("Nats-Msg-Id"),
                 HeaderValue::from_static("abcd"),
             ),
             (
@@ -235,7 +235,7 @@ mod tests {
                 HeaderValue::from_static("1"),
             ),
             (
-                HeaderName::from_static("Nats-Message-Id"),
+                HeaderName::from_static("Nats-Msg-Id"),
                 HeaderValue::from_static("1234"),
             ),
         ]
@@ -248,7 +248,7 @@ mod tests {
     fn verify_header_map(headers: &HeaderMap) {
         assert_eq!(
             [
-                HeaderName::from_static("Nats-Message-Id"),
+                HeaderName::from_static("Nats-Msg-Id"),
                 HeaderName::from_static("Nats-Sequence")
             ]
             .as_slice(),
@@ -262,7 +262,7 @@ mod tests {
         assert_eq!(
             [
                 (
-                    HeaderName::from_static("Nats-Message-Id"),
+                    HeaderName::from_static("Nats-Msg-Id"),
                     vec![
                         HeaderValue::from_static("abcd"),
                         HeaderValue::from_static("1234")

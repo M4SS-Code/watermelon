@@ -206,8 +206,8 @@ mod tests {
 
     #[test]
     fn eq() {
-        let cased = HeaderName::from_static("Nats-Message-Id");
-        let lowercase = HeaderName::from_static("nats-message-id");
+        let cased = HeaderName::from_static("Nats-Msg-Id");
+        let lowercase = HeaderName::from_static("nats-msg-id");
         assert_eq!(cased, lowercase);
         assert_eq!(cased.cmp(&lowercase), Ordering::Equal);
     }

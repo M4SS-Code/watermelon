@@ -173,7 +173,7 @@ mod tests {
                     reply_subject: None,
                     headers: [
                         (
-                            HeaderName::from_static("Nats-Message-Id"),
+                            HeaderName::from_static("Nats-Msg-Id"),
                             HeaderValue::from_static("abcd"),
                         ),
                         (
@@ -186,7 +186,7 @@ mod tests {
                     payload: Bytes::from_static(b"Hello World!"),
                 },
             }).to_bytes(),
-            "HPUB hello.world 53 65\r\nNATS/1.0\r\nNats-Message-Id: abcd\r\nNats-Sequence: 1\r\n\r\nHello World!\r\n".as_bytes()
+            "HPUB hello.world 49 61\r\nNATS/1.0\r\nNats-Msg-Id: abcd\r\nNats-Sequence: 1\r\n\r\nHello World!\r\n".as_bytes()
         );
     }
 }

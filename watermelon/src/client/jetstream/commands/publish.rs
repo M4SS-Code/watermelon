@@ -423,13 +423,13 @@ pub(crate) fn build_headers(
     }
     if let Some(id) = expected_last_message_id {
         headers.insert(
-            HeaderName::from_static("Nats-Expected-Last-Message-Id"),
+            HeaderName::from_static("Nats-Expected-Last-Msg-Id"),
             HeaderValue::from_bytes(id.as_bytes())?,
         );
     }
     if let Some(id) = message_id {
         headers.insert(
-            HeaderName::from_static("Nats-Message-Id"),
+            HeaderName::from_static("Nats-Msg-Id"),
             HeaderValue::from_bytes(id.as_bytes())?,
         );
     }
