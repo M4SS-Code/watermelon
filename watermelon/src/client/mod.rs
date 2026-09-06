@@ -596,7 +596,7 @@ async fn connect(
                 return None;
             }
             Err((_err, prev_recycle)) => {
-                recycle = prev_recycle;
+                recycle = *prev_recycle;
                 if delay < MIN_RECONNECT_DELAY {
                     delay = MIN_RECONNECT_DELAY;
                 } else {

@@ -146,7 +146,7 @@ impl Handler {
         addr: &ServerAddr,
         builder: &ClientBuilder,
         mut recycle: RecycledHandler,
-    ) -> Result<Option<Self>, (ConnectHandlerError, RecycledHandler)> {
+    ) -> Result<Option<Self>, (ConnectHandlerError, Box<RecycledHandler>)> {
         let mut flags = ConnectFlags::default();
         flags.tcp_nodelay = builder.tcp_nodelay;
         flags.echo = matches!(builder.echo, Echo::Allow);
@@ -162,8 +162,8 @@ impl Handler {
         let (mut conn, info) = match recycle.fuse_shutdown(fut).await {
             FuseShutdown::Output(connect_result) => match connect_result {
                 Ok(Ok(items)) => items,
-                Ok(Err(err)) => return Err((ConnectHandlerError::Connect(err), recycle)),
-                Err(_elapsed) => return Err((ConnectHandlerError::TimedOut, recycle)),
+                Ok(Err(err)) => return Err((ConnectHandlerError::Connect(err), Box::new(recycle))),
+                Err(_elapsed) => return Err((ConnectHandlerError::TimedOut, Box::new(recycle))),
             },
             FuseShutdown::Shutdown => {
                 return Ok(None);
