@@ -1,66 +1,62 @@
 name: CI
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
 
 permissions:
   contents: read
 
+env:
+  RUST_VERSION: 1.98.1
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  cargo-deny:
-    name: cargo-deny
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: EmbarkStudios/cargo-deny-action@v2
-
   fmt:
     name: rustfmt / 1.98.1
-    runs-on: ubuntu-latest
-
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v6
-
-      - uses: dtolnay/rust-toolchain@1.98.1
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
+
+      - name: Rust toolchain
+        uses: dtolnay/rust-toolchain@d1031067263f94b142dd6c0ce24c5eb9d02d52a0 # master
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
           components: rustfmt
 
-      - name: Rust rustfmt
-        run: cargo fmt --all -- --check
+      - name: cargo fmt
+        run: cargo fmt -- --check
 
   clippy:
     name: clippy / 1.98.1
-    runs-on: ubuntu-latest
-
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
-
-      - uses: dtolnay/rust-toolchain@1.98.1
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
+
+      - name: Rust toolchain
+        uses: dtolnay/rust-toolchain@d1031067263f94b142dd6c0ce24c5eb9d02d52a0 # master
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
           components: clippy
 
-      - name: Run clippy
+      - name: cargo clippy
         run: cargo clippy --locked --all-features -- -D warnings
-
-  cargo-hack:
-    name: cargo-hack / 1.98.1
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: dtolnay/rust-toolchain@1.98.1
-
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-hack@0.6.39
-
-      - name: Run cargo-hack
-        run: cargo hack check --feature-powerset --no-dev-deps --at-least-one-of aws-lc-rs,ring --at-least-one-of rand,getrandom
 
   test:
     name: test / ${{ matrix.name }}
-    runs-on: ubuntu-latest
-
+    runs-on: ubuntu-26.04
+    timeout-minutes: 25
     strategy:
       matrix:
         include:
@@ -72,22 +68,74 @@ jobs:
             rust: nightly
           - name: 1.89.0
             rust: 1.89.0
-
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: dtolnay/rust-toolchain@master
+      - name: Rust toolchain
+        uses: dtolnay/rust-toolchain@d1031067263f94b142dd6c0ce24c5eb9d02d52a0 # master
         with:
           toolchain: ${{ matrix.rust }}
 
-      - name: Run tests
+      - name: Cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: rust-${{ matrix.rust }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            rust-${{ matrix.rust }}-${{ runner.arch }}-
+
+      - name: cargo test
         run: cargo test --locked
 
-      - name: Run tests (--features websocket,portable-atomic)
+      - name: cargo test (--features websocket,portable-atomic)
         run: cargo test --locked --features websocket,portable-atomic
 
-      - name: Run tests (--no-default-features --features ring,getrandom)
+      - name: cargo test (--no-default-features --features ring,getrandom)
         run: cargo test --locked --no-default-features --features ring,getrandom
 
-      - name: Run tests (--no-default-features --features graviola,getrandom)
+      - name: cargo test (--no-default-features --features graviola,getrandom)
         run: cargo test --locked --no-default-features --features graviola,getrandom
+
+  cargo-hack:
+    name: cargo-hack / 1.98.1
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Rust toolchain
+        uses: dtolnay/rust-toolchain@d1031067263f94b142dd6c0ce24c5eb9d02d52a0 # master
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+
+      - name: cargo-hack
+        uses: taiki-e/install-action@3f74d7c16a4242f1c95561e98edc25d36adb4375 # v2
+        with:
+          tool: cargo-hack@0.6.39
+
+      - name: cargo hack
+        run: cargo hack check --feature-powerset --no-dev-deps --at-least-one-of aws-lc-rs,ring --at-least-one-of rand,getrandom
+
+  deny:
+    name: cargo-deny
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: cargo deny
+        uses: EmbarkStudios/cargo-deny-action@c3bbe7e4e3f7baeee1a3dd9aec0a3b2aded580fb # v2.1.1
+        with:
+          arguments: --all-features
