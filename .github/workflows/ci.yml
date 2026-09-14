@@ -105,7 +105,7 @@ jobs:
   cargo-hack:
     name: cargo-hack / 1.98.1
     runs-on: ubuntu-26.04
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
