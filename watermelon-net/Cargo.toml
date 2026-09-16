@@ -29,6 +29,7 @@ pin-project-lite = "0.2.15"
 [dev-dependencies]
 tokio = { version = "1", features = ["macros"] }
 futures-util = { version = "0.3.14", default-features = false }
+tokio-websockets = { version = "0.13", features = ["server"] }
 claims = "0.8"
 
 [features]
