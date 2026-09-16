@@ -127,7 +127,13 @@ pub(super) fn decode(
                     Ok(Some(ServerOp::Success))
                 } else if control_line.starts_with(b"-ERR ") {
                     control_line.advance("-ERR ".len());
-                    if !control_line.starts_with(b"'") || !control_line.ends_with(b"'") {
+                    // A single `'` satisfies both `starts_with` and `ends_with`
+                    // while only being one byte long: requiring at least two
+                    // bytes keeps the quote stripping below from underflowing.
+                    if control_line.len() < 2
+                        || !control_line.starts_with(b"'")
+                        || !control_line.ends_with(b"'")
+                    {
                         return Err(DecoderError::InvalidErrorMessage);
                     }
 

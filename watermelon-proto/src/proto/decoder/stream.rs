@@ -107,6 +107,29 @@ mod tests {
     }
 
     #[test]
+    fn decode_error_bare_quote() {
+        let mut decoder = StreamDecoder::new();
+        // A single-quote-only message used to underflow the quote
+        // stripping logic (`len() - 1` on an empty buffer).
+        decoder.read_buf().put_slice(b"-ERR '\r\n");
+        assert_matches!(decoder.decode(), Err(DecoderError::InvalidErrorMessage));
+    }
+
+    #[test]
+    fn decode_error_empty_message() {
+        let mut decoder = StreamDecoder::new();
+        decoder.read_buf().put_slice(b"-ERR ''\r\n");
+        assert_ok_eq!(
+            decoder.decode(),
+            Some(ServerOp::Error {
+                error: ServerError::Other {
+                    raw_message: ByteString::new()
+                }
+            })
+        );
+    }
+
+    #[test]
     fn decode_msg() {
         let mut decoder = StreamDecoder::new();
         decoder
