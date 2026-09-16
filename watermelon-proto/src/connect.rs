@@ -14,7 +14,7 @@ pub struct Connect {
     pub username: Option<String>,
     #[serde(rename = "pass")]
     pub password: Option<String>,
-    #[serde(rename = "name")]
+    #[serde(rename = "name", skip_serializing_if = "Option::is_none")]
     pub client_name: Option<String>,
     #[serde(rename = "lang")]
     pub client_lang: &'static str,
