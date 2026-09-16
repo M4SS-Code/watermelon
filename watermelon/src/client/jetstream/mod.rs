@@ -211,6 +211,12 @@ impl JetstreamClient {
     }
 
     /// List consumers present within this client's Jetstream context
+    ///
+    /// # Errors
+    ///
+    /// It yields an error as the first item of the returned stream if the given
+    /// `stream_name` produces an invalid subject or if an error occurs while listing
+    /// the consumers. The stream then terminates.
     pub fn consumers(&self, stream_name: impl Display) -> Consumers {
         Consumers::new(self.clone(), stream_name)
     }

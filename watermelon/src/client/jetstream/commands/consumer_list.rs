@@ -9,7 +9,7 @@ use std::{
 use futures_core::{FusedStream, Stream};
 use serde::Deserialize;
 use serde_json::json;
-use watermelon_proto::Subject;
+use watermelon_proto::{Subject, error::SubjectValidateError};
 
 use crate::{
     client::{self, JetstreamClient, jetstream::JetstreamError},
@@ -23,7 +23,8 @@ use crate::{
 pub struct Consumers {
     client: JetstreamClient,
     offset: u32,
-    partial_subject: Subject,
+    partial_subject: Option<Subject>,
+    invalid_stream_name: Option<SubjectValidateError>,
     fetch: Option<BoxFuture<'static, Result<ConsumersResponse, JetstreamError>>>,
     buffer: VecDeque<client::Consumer>,
     exhausted: bool,
@@ -37,13 +38,19 @@ struct ConsumersResponse {
 
 impl Consumers {
     pub(crate) fn new(client: JetstreamClient, stream_name: impl Display) -> Self {
-        let partial_subject = format!("CONSUMER.LIST.{stream_name}")
-            .try_into()
-            .expect("stream name is valid");
+        // An invalid stream name is reported as a stream error on the first
+        // poll rather than panicking here, matching the error-returning
+        // behavior of the rest of the JetStream API.
+        let (partial_subject, invalid_stream_name) =
+            match Subject::try_from(format!("CONSUMER.LIST.{stream_name}")) {
+                Ok(subject) => (Some(subject), None),
+                Err(err) => (None, Some(err)),
+            };
         Self {
             client,
             offset: 0,
             partial_subject,
+            invalid_stream_name,
             fetch: None,
             buffer: VecDeque::new(),
             exhausted: false,
@@ -57,6 +64,12 @@ impl Stream for Consumers {
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let this = self.get_mut();
 
+        if let Some(err) = this.invalid_stream_name.take() {
+            // Yield the invalid stream name once, then end the stream.
+            this.exhausted = true;
+            return Poll::Ready(Some(Err(JetstreamError::Subject(err))));
+        }
+
         if let Some(consumer) = this.buffer.pop_front() {
             return Poll::Ready(Some(Ok(consumer)));
         }
@@ -67,7 +80,10 @@ impl Stream for Consumers {
 
         let fetch = this.fetch.get_or_insert_with(|| {
             let client = this.client.clone();
-            let partial_subject = this.partial_subject.clone();
+            let Some(partial_subject) = this.partial_subject.clone() else {
+                // Invalid stream names are handled before the first fetch
+                unreachable!("partial_subject is None with no pending error");
+            };
             let offset = this.offset;
 
             Box::pin(async move {
@@ -116,5 +132,36 @@ impl Stream for Consumers {
 impl FusedStream for Consumers {
     fn is_terminated(&self) -> bool {
         self.buffer.is_empty() && self.exhausted
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{
+        pin::Pin,
+        task::{Context, Poll, Waker},
+    };
+
+    use claims::assert_matches;
+    use futures_core::{FusedStream as _, Stream as _};
+
+    use crate::client::{Client, JetstreamClient, jetstream::JetstreamError};
+
+    #[tokio::test]
+    async fn invalid_stream_name_yields_error() {
+        let (client, _handler) = Client::test(1);
+        let mut consumers = JetstreamClient::new(client).consumers("invalid name");
+
+        let mut cx = Context::from_waker(Waker::noop());
+        // Used to panic while constructing the `Consumers` stream
+        assert_matches!(
+            Pin::new(&mut consumers).poll_next(&mut cx),
+            Poll::Ready(Some(Err(JetstreamError::Subject(_))))
+        );
+        assert!(consumers.is_terminated());
+        assert_matches!(
+            Pin::new(&mut consumers).poll_next(&mut cx),
+            Poll::Ready(None)
+        );
     }
 }
