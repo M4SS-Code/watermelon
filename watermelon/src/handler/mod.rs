@@ -436,7 +436,9 @@ impl Future for Handler {
             match this.conn.poll_read_next(cx) {
                 Poll::Pending => break,
                 Poll::Ready(Ok(server_op)) => {
-                    let _ = this.handle_server_op(server_op);
+                    if let ControlFlow::Break(output) = this.handle_server_op(server_op) {
+                        return Poll::Ready(output);
+                    }
                     handled_server_op = true;
                 }
                 Poll::Ready(Err(_err)) => return Poll::Ready(HandlerOutput::Disconnected),
@@ -743,4 +745,94 @@ fn init_multiplexed_subscriptions<'a>(
     });
 
     multiplexed_subscriptions.insert(BTreeMap::new())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{sync::Arc, time::Duration};
+
+    use tokio::{
+        io::{AsyncReadExt as _, AsyncWriteExt as _},
+        net::{TcpListener, TcpStream},
+        sync::mpsc,
+        time::timeout,
+    };
+
+    use crate::{
+        client::{Client, RawQuickInfo},
+        handler::{Handler, HandlerOutput, RecycledHandler},
+    };
+
+    const INFO: &str = r#"{"server_id":"id","server_name":"name","version":"2.12.0","go":"go1.25","host":"127.0.0.1","port":4222,"headers":true,"max_payload":1048576,"proto":2}"#;
+
+    async fn read_line(stream: &mut TcpStream) -> Vec<u8> {
+        let mut buf = Vec::new();
+        let mut byte = [0; 1];
+        loop {
+            stream.read_exact(&mut byte).await.unwrap();
+            buf.push(byte[0]);
+            if buf.ends_with(b"\r\n") {
+                return buf;
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn fatal_server_error_terminates_handler() {
+        let listener = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0))
+            .await
+            .unwrap();
+        let port = listener.local_addr().unwrap().port();
+
+        let server = tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            stream
+                .write_all(format!("INFO {INFO}\r\n").as_bytes())
+                .await
+                .unwrap();
+
+            let connect = read_line(&mut stream).await;
+            assert!(connect.starts_with(b"CONNECT "));
+            let ping = read_line(&mut stream).await;
+            assert_eq!(ping, b"PING\r\n");
+
+            // Complete the handshake, then hit the client with a fatal error
+            stream.write_all(b"+OK\r\nPONG\r\n").await.unwrap();
+            stream
+                .write_all(b"-ERR 'Authorization Violation'\r\n")
+                .await
+                .unwrap();
+
+            // Keep the connection open: the handler must terminate because
+            // of the fatal error, not because of an EOF.
+            let mut sink = Vec::new();
+            let _ = stream.read_to_end(&mut sink).await;
+        });
+
+        let builder = Client::builder();
+        let (_commands_sender, commands_receiver) = mpsc::channel(16);
+        let (_shutdown_sender, shutdown_receiver) = mpsc::channel(1);
+        let recycle = RecycledHandler::new(
+            commands_receiver,
+            Arc::new(RawQuickInfo::new()),
+            &builder,
+            shutdown_receiver,
+        );
+
+        let addr = format!("nats://127.0.0.1:{port}").parse().unwrap();
+        let mut handler = Handler::connect(&addr, &builder, recycle)
+            .await
+            .expect("connect failed")
+            .expect("shutdown while connecting");
+
+        // The fatal error must terminate the handler, which used to ignore
+        // it and keep running.
+        let output = timeout(Duration::from_secs(5), &mut handler)
+            .await
+            .expect("handler did not terminate after the fatal error");
+        assert!(matches!(output, HandlerOutput::ServerError));
+
+        drop(handler);
+        server.await.unwrap();
+    }
 }
