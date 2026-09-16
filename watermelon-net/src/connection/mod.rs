@@ -253,13 +253,24 @@ where
             #[cfg(feature = "websocket")]
             Err(ConnectionReadError::Websocket(WebsocketReadError::Decoder(
                 FrameDecoderError::IncompleteFrame,
-            ))) => todo!(),
+            ))) => {
+                // The server sent a websocket frame that doesn't contain a
+                // complete NATS operation.
+                return Err(ConnectError::Io(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    FrameDecoderError::IncompleteFrame,
+                )));
+            }
             #[cfg(feature = "websocket")]
             Err(ConnectionReadError::Websocket(WebsocketReadError::Io(err))) => {
                 return Err(ConnectError::Io(err));
             }
             #[cfg(feature = "websocket")]
-            Err(ConnectionReadError::Websocket(WebsocketReadError::Closed)) => todo!(),
+            Err(ConnectionReadError::Websocket(WebsocketReadError::Closed)) => {
+                // Match the streaming connection, which reports an EOF during
+                // the handshake as `UnexpectedEof`.
+                return Err(ConnectError::Io(io::ErrorKind::UnexpectedEof.into()));
+            }
         }
     }
 }
