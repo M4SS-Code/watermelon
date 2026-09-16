@@ -24,6 +24,7 @@ type BoxError = Box<dyn std::error::Error + Send + Sync + 'static>;
 #[tokio::main]
 async fn main() -> Result<(), BoxError> {
     let client = Client::builder()
+        .client_name("watermelon-example")
         .connect("nats://demo.nats.io".parse()?)
         .await?;
     println!("Quick Info: {:?}", client.quick_info());

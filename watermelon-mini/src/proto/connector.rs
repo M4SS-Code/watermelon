@@ -53,7 +53,7 @@ pub enum ConnectError {
 pub(crate) async fn connect(
     connector: &TlsConnector,
     addr: &ServerAddr,
-    client_name: String,
+    client_name: Option<String>,
     auth_method: Option<&AuthenticationMethod>,
     flags: ConnectFlags,
 ) -> Result<
@@ -164,7 +164,7 @@ pub(crate) async fn connect(
         auth_token: None,
         username: None,
         password: None,
-        client_name: Some(client_name),
+        client_name,
         client_lang: "rust-watermelon",
         client_version: env!("CARGO_PKG_VERSION"),
         protocol: 1,

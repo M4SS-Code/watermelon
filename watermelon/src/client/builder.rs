@@ -13,6 +13,7 @@ use crate::{core::Client, handler::ConnectHandlerError};
 #[derive(Debug)]
 pub struct ClientBuilder {
     pub(crate) tcp_nodelay: bool,
+    pub(crate) client_name: Option<String>,
     pub(crate) auth_method: Option<AuthenticationMethod>,
     pub(crate) connect_timeout: Duration,
     pub(crate) write_delay: Duration,
@@ -41,6 +42,7 @@ impl ClientBuilder {
     pub(super) fn new() -> Self {
         Self {
             tcp_nodelay: true,
+            client_name: None,
             auth_method: None,
             connect_timeout: Duration::from_secs(30),
             write_delay: Duration::ZERO,
@@ -127,6 +129,18 @@ impl ClientBuilder {
     #[must_use]
     pub fn authentication_method(mut self, auth_method: Option<AuthenticationMethod>) -> Self {
         self.auth_method = auth_method;
+        self
+    }
+
+    /// Define the name of this client, sent to the server in the `CONNECT` protocol message
+    ///
+    /// The name identifies this client to the server and is shown in server logs
+    /// and in monitoring tools.
+    ///
+    /// Default: no client name
+    #[must_use]
+    pub fn client_name(mut self, client_name: impl Into<String>) -> Self {
+        self.client_name = Some(client_name.into());
         self
     }
 

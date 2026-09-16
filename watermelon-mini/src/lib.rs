@@ -28,6 +28,7 @@ mod util;
 pub struct ConnectFlags {
     pub tcp_nodelay: bool,
     pub echo: bool,
+    pub client_name: Option<String>,
     #[cfg(feature = "non-standard-zstd")]
     pub zstd_compression_level: Option<u8>,
 }
@@ -37,6 +38,7 @@ impl Default for ConnectFlags {
         Self {
             tcp_nodelay: true,
             echo: false,
+            client_name: None,
             #[cfg(feature = "non-standard-zstd")]
             zstd_compression_level: Some(3),
         }
@@ -81,7 +83,7 @@ pub async fn easy_connect(
             .with_no_client_auth(),
     ));
 
-    let (conn, info) = connect(&connector, addr, "watermelon".to_owned(), auth, flags).await?;
+    let (conn, info) = connect(&connector, addr, flags.client_name.clone(), auth, flags).await?;
     Ok((conn, info))
 }
 

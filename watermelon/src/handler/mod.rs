@@ -149,6 +149,7 @@ impl Handler {
     ) -> Result<Option<Self>, (ConnectHandlerError, Box<RecycledHandler>)> {
         let mut flags = ConnectFlags::default();
         flags.tcp_nodelay = builder.tcp_nodelay;
+        flags.client_name = builder.client_name.clone();
         flags.echo = matches!(builder.echo, Echo::Allow);
         #[cfg(feature = "non-standard-zstd")]
         {
