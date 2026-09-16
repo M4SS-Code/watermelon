@@ -65,19 +65,28 @@ impl ServerError {
     }
 
     pub(crate) fn parse(raw_message: ByteString) -> Self {
-        const PUBLISH_PERMISSIONS: &str = "Permissions Violation for Publish";
-        const SUBSCRIPTION_PERMISSIONS: &str = "Permissions Violation for Subscription";
+        const PUBLISH_PERMISSIONS: &[u8] = b"Permissions Violation for Publish";
+        const SUBSCRIPTION_PERMISSIONS: &[u8] = b"Permissions Violation for Subscription";
 
+        // The message comes from the server, so the permission prefixes are
+        // compared byte-wise: a multi-byte character in the prefix region is
+        // just a byte mismatch, i.e. a non-match (`Other` below) — `&str`
+        // indexing at these offsets would panic instead.
         let m = raw_message.trim();
+        let bytes = m.as_bytes();
+        let matches_prefix = |needle: &[u8]| {
+            bytes.len() > needle.len()
+                && bytes[..needle.len()]
+                    .iter()
+                    .zip(needle)
+                    .all(|(a, b)| a.eq_ignore_ascii_case(b))
+        };
+
         if m.eq_ignore_ascii_case("Invalid Subject") {
             Self::InvalidSubject
-        } else if m.len() > PUBLISH_PERMISSIONS.len()
-            && m[..PUBLISH_PERMISSIONS.len()].eq_ignore_ascii_case(PUBLISH_PERMISSIONS)
-        {
+        } else if matches_prefix(PUBLISH_PERMISSIONS) {
             Self::PublishPermissionViolation
-        } else if m.len() > SUBSCRIPTION_PERMISSIONS.len()
-            && m[..SUBSCRIPTION_PERMISSIONS.len()].eq_ignore_ascii_case(SUBSCRIPTION_PERMISSIONS)
-        {
+        } else if matches_prefix(SUBSCRIPTION_PERMISSIONS) {
             Self::SubscribePermissionViolation
         } else if m.eq_ignore_ascii_case("Unknown Protocol Operation") {
             Self::UnknownProtocolOperation
@@ -106,5 +115,52 @@ impl ServerError {
         } else {
             Self::Other { raw_message }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use bytestring::ByteString;
+
+    use super::ServerError;
+
+    #[test]
+    fn parse_permission_violations() {
+        assert_eq!(
+            ServerError::parse(ByteString::from_static(
+                "Permissions Violation for Publish for subject \"a.b\"",
+            )),
+            ServerError::PublishPermissionViolation,
+        );
+        assert_eq!(
+            ServerError::parse(ByteString::from_static(
+                "Permissions Violation for Subscription for subject \"a.b\"",
+            )),
+            ServerError::SubscribePermissionViolation,
+        );
+    }
+
+    // A multi-byte character straddling the prefix length must not panic on
+    // byte indexing but be reported as an unknown error.
+    #[test]
+    fn parse_prefix_straddling_char_boundary() {
+        // `€` occupies bytes 32..35, so the 33-byte `Publish` prefix ends
+        // mid-character.
+        let msg = format!("{}€b", "a".repeat(32));
+        assert_eq!(
+            ServerError::parse(msg.clone().into()),
+            ServerError::Other {
+                raw_message: msg.clone().into(),
+            },
+        );
+
+        // Same for the 38-byte `Subscription` prefix.
+        let msg = format!("{}€b", "a".repeat(37));
+        assert_eq!(
+            ServerError::parse(msg.clone().into()),
+            ServerError::Other {
+                raw_message: msg.into(),
+            },
+        );
     }
 }
