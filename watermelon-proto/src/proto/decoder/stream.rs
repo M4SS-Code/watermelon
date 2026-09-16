@@ -293,6 +293,18 @@ mod tests {
     }
 
     #[test]
+    fn msg_huge_payload_len() {
+        let mut decoder = StreamDecoder::new();
+        decoder
+            .read_buf()
+            .put_slice(b"MSG hello.world 1 18446744073709551615\r\nHello");
+        // The decoder must keep waiting for the (impossibly long) payload
+        // instead of overflowing while checking the buffered length and
+        // panicking in the `split_to` call.
+        assert_ok_eq!(decoder.decode(), None);
+    }
+
+    #[test]
     fn head_too_long() {
         let mut decoder = StreamDecoder::new();
         decoder.read_buf().put_bytes(0, 200_000);

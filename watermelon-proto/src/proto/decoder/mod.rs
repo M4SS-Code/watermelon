@@ -144,7 +144,11 @@ pub(super) fn decode(
                 decode_headers(crlf, read_buf, status)?;
             }
             DecoderStatus::Payload { payload_len, .. } => {
-                if read_buf.len() < *payload_len + "\r\n".len() {
+                // `payload_len` is declared by the server and may be close to
+                // `usize::MAX`, in which case adding the CRLF length overflows
+                // and (in release builds) wraps around, letting a partial
+                // payload through to the panicking `split_to` call below.
+                if read_buf.len() < payload_len.saturating_add("\r\n".len()) {
                     return Ok(None);
                 }
 
