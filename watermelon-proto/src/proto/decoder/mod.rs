@@ -30,6 +30,14 @@ mod stream;
 // gateway reply prefixes), so be generous here.
 const MAX_HEAD_LEN: usize = 128 * 1024;
 
+// Sanity limit for the payload length declared by `MSG` and the total length
+// declared by `HMSG`. The nats-server bounds the messages it delivers by the
+// `max_payload` option (1 MiB by default, validated against `max_pending`,
+// 64 MiB by default; nats-server v2.15), so a larger declared length can only
+// come from a broken or malicious peer. Without a limit such a peer could
+// make the read buffer grow without bounds.
+const MAX_MSG_LEN: usize = 128 * 1024 * 1024;
+
 #[derive(Debug)]
 pub(super) enum DecoderStatus {
     ControlLine {
@@ -219,6 +227,11 @@ fn decode_msg(mut control_line: Bytes) -> Result<DecoderStatus, DecoderError> {
         .map(Subject::from_dangerous_value);
     let payload_len =
         util::parse_usize(&payload_len).map_err(DecoderError::InvalidPayloadLength)?;
+    if payload_len > MAX_MSG_LEN {
+        // The declared length doesn't overflow `usize`, but it overflows what
+        // we're willing to buffer: report it as an overflow.
+        return Err(DecoderError::InvalidPayloadLength(ParseUintError::Overflow));
+    }
     Ok(DecoderStatus::Payload {
         subscription_id,
         subject,
@@ -277,6 +290,11 @@ fn decode_hmsg(mut control_line: Bytes) -> Result<DecoderStatus, DecoderError> {
         .map(Subject::from_dangerous_value);
     let header_len = util::parse_usize(&header_len).map_err(DecoderError::InvalidHeaderLength)?;
     let total_len = util::parse_usize(&total_len).map_err(DecoderError::InvalidPayloadLength)?;
+    if total_len > MAX_MSG_LEN {
+        // The declared length doesn't overflow `usize`, but it overflows what
+        // we're willing to buffer: report it as an overflow.
+        return Err(DecoderError::InvalidPayloadLength(ParseUintError::Overflow));
+    }
 
     let payload_len = total_len
         .checked_sub(header_len)

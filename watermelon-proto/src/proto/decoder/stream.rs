@@ -62,6 +62,7 @@ mod tests {
         headers::{HeaderMap, HeaderName, HeaderValue},
         message::{MessageBase, ServerMessage},
         proto::{error::DecoderError, server::ServerOp},
+        util::ParseUintError,
     };
 
     use super::StreamDecoder;
@@ -298,10 +299,37 @@ mod tests {
         decoder
             .read_buf()
             .put_slice(b"MSG hello.world 1 18446744073709551615\r\nHello");
-        // The decoder must keep waiting for the (impossibly long) payload
-        // instead of overflowing while checking the buffered length and
-        // panicking in the `split_to` call.
-        assert_ok_eq!(decoder.decode(), None);
+        // The decoder must reject the impossibly long declared payload
+        // instead of waiting for it (or, historically, overflowing while
+        // checking the buffered length and panicking in `split_to`).
+        assert_matches!(
+            decoder.decode(),
+            Err(DecoderError::InvalidPayloadLength(ParseUintError::Overflow))
+        );
+    }
+
+    #[test]
+    fn msg_payload_len_over_limit() {
+        let mut decoder = StreamDecoder::new();
+        decoder
+            .read_buf()
+            .put_slice(b"MSG hello.world 1 134217729\r\n");
+        assert_matches!(
+            decoder.decode(),
+            Err(DecoderError::InvalidPayloadLength(ParseUintError::Overflow))
+        );
+    }
+
+    #[test]
+    fn hmsg_total_len_over_limit() {
+        let mut decoder = StreamDecoder::new();
+        decoder
+            .read_buf()
+            .put_slice(b"HMSG hello.world 1 100 134217729\r\n");
+        assert_matches!(
+            decoder.decode(),
+            Err(DecoderError::InvalidPayloadLength(ParseUintError::Overflow))
+        );
     }
 
     #[test]
