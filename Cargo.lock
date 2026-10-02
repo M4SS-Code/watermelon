@@ -1529,6 +1529,7 @@ dependencies = [
  "watermelon-net",
  "watermelon-nkeys",
  "watermelon-proto",
+ "watermelon-testkit",
 ]
 
 [[package]]
