@@ -115,7 +115,8 @@ impl Stream for Consumers {
                 if this.buffer.len() < response.limit as usize {
                     this.exhausted = true;
                 } else if !this.buffer.is_empty() {
-                    this.offset += 1;
+                    // The offset counts items, not pages
+                    this.offset += response.limit;
                 }
 
                 cx.waker().wake_by_ref();
