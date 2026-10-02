@@ -1,0 +1,25 @@
+[package]
+name = "watermelon-testkit"
+version = "0.1.0"
+description = "Run tests against isolated, disposable nats-server instances"
+categories = ["development-tools::testing"]
+keywords = ["nats", "testing"]
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+tokio = { version = "1.44", features = ["fs", "process", "time"] }
+bytes = "1"
+hyper = { version = "1.11", default-features = false, features = ["client", "http1"] }
+hyper-util = { version = "0.1.21", default-features = false, features = ["client-legacy", "http1", "tokio"] }
+http-body-util = "0.1.5"
+serde_json = "1"
+tempfile = "3.27"
+
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1.1", default-features = false, features = ["std", "process"] }
+
+[lints]
+workspace = true
