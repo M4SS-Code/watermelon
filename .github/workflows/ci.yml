@@ -90,6 +90,9 @@ jobs:
           restore-keys: |
             rust-${{ matrix.rust }}-${{ runner.arch }}-
 
+      - name: nats-server
+        run: echo "NATS_SERVER_BIN=$(scripts/fetch-nats-server.sh)" >> "$GITHUB_ENV"
+
       - name: cargo test
         run: cargo test --locked
 
@@ -101,6 +104,49 @@ jobs:
 
       - name: cargo test (--no-default-features --features graviola,getrandom)
         run: cargo test --locked --no-default-features --features graviola,getrandom
+
+  # The test job runs the live tests against the latest nats-server,
+  # this one covers the oldest supported release line
+  live:
+    name: live / nats-server ${{ matrix.nats-server }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        nats-server: ["2.12.15"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Rust toolchain
+        uses: dtolnay/rust-toolchain@d1031067263f94b142dd6c0ce24c5eb9d02d52a0 # master
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+
+      - name: Cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: live-${{ runner.arch }}-${{ matrix.nats-server }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            live-${{ runner.arch }}-${{ matrix.nats-server }}-
+
+      - name: nats-server
+        run: echo "NATS_SERVER_BIN=$(scripts/fetch-nats-server.sh "$NATS_SERVER_VERSION")" >> "$GITHUB_ENV"
+        env:
+          NATS_SERVER_VERSION: ${{ matrix.nats-server }}
+
+      - name: cargo test --test live
+        run: cargo test --locked -p watermelon --test live
+
+      - name: cargo test --test live (--features websocket)
+        run: cargo test --locked -p watermelon --test live --features websocket
 
   cargo-hack:
     name: cargo-hack / 1.98.1
