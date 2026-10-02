@@ -13,11 +13,13 @@ use super::JetstreamApiError;
 mod consumer;
 mod stream;
 
+// The error variant must come first: some error responses, like the ones
+// to a JetStream publish, also contain the fields of a successful response
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
 pub(crate) enum Response<T> {
-    Response(T),
     Error { error: JetstreamApiError },
+    Response(T),
 }
 
 /// Response from a Jetstream consumer delete operation.

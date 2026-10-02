@@ -11,7 +11,7 @@ use watermelon_proto::{
 };
 
 use crate::{
-    client::{ClientClosedError, JetstreamClient, JetstreamError},
+    client::{JetstreamClient, JetstreamError, ResponseError, jetstream::resources::Response},
     util::BoxFuture,
 };
 
@@ -352,37 +352,32 @@ pub(crate) async fn do_publish(
         .await
         .map_err(JetstreamError::ClientClosed)?;
 
-    let response = response_fut
-        .await
-        .map_err(|_| JetstreamError::ClientClosed(ClientClosedError))?;
+    let response = response_fut.await.map_err(|err| match err {
+        // No stream is listening on the subject
+        ResponseError::NoResponders => {
+            JetstreamError::PublishStatus(JetstreamPublishError::NoStreamMatches)
+        }
+        err => JetstreamError::ResponseError(err),
+    })?;
 
     // Check for status codes
     if let Some(status) = response.status_code {
-        if status == StatusCode::NO_RESPONDERS {
-            return Err(JetstreamError::PublishStatus(
-                crate::client::jetstream::JetstreamPublishError::JetStreamNotEnabled,
-            ));
-        }
-        let status_u16 = u16::from(status);
-        return Err(match status_u16 {
-            503 => JetstreamError::PublishStatus(
-                crate::client::jetstream::JetstreamPublishError::JetStreamNotEnabled,
-            ),
-            409 => JetstreamError::PublishStatus(
-                crate::client::jetstream::JetstreamPublishError::NoStreamMatches,
-            ),
-            _ => {
+        return Err(JetstreamError::PublishStatus(
+            if status == StatusCode::CONFLICT {
+                JetstreamPublishError::NoStreamMatches
+            } else {
                 let detail = String::from_utf8_lossy(&response.base.payload).to_string();
-                JetstreamError::PublishStatus(
-                    crate::client::jetstream::JetstreamPublishError::Other(detail),
-                )
-            }
-        });
+                JetstreamPublishError::Other(detail)
+            },
+        ));
     }
 
-    let pub_ack =
-        serde_json::from_slice::<PubAck>(&response.base.payload).map_err(JetstreamError::Json)?;
-    Ok(pub_ack)
+    match serde_json::from_slice::<Response<PubAck>>(&response.base.payload)
+        .map_err(JetstreamError::Json)?
+    {
+        Response::Response(pub_ack) => Ok(pub_ack),
+        Response::Error { error } => Err(JetstreamError::Api(error)),
+    }
 }
 
 pub(crate) fn build_headers(
