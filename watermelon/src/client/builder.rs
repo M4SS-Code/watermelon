@@ -3,8 +3,6 @@ use std::time::Duration;
 use watermelon_mini::AuthenticationMethod;
 use watermelon_proto::{ServerAddr, Subject};
 
-#[cfg(feature = "from-env")]
-use super::from_env::FromEnv;
 use crate::{core::Client, handler::ConnectHandlerError};
 
 /// A builder for [`Client`]
@@ -52,60 +50,6 @@ impl ClientBuilder {
             #[cfg(feature = "non-standard-zstd")]
             non_standard_zstd_compression_level: Some(3),
         }
-    }
-
-    /// Construct [`ClientBuilder`] from environment variables
-    ///
-    /// Reads the following environment variables into [`ClientBuilder`]:
-    ///
-    /// Authentication:
-    ///
-    /// * `NATS_JWT` and `NATS_NKEY`: use nkey authentication
-    /// * `NATS_CREDS_FILE`: read JWT and NKEY from the provided `.creds` file
-    /// * `NATS_USERNAME` and `NATS_PASSWORD`: use username and password authentication
-    ///
-    /// # Panics
-    ///
-    /// It panics if:
-    ///
-    /// - it is not possible to get the environment variables;
-    /// - an error occurs when trying to read the credentials file;
-    /// - the credentials file is invalid.
-    #[cfg(feature = "from-env")]
-    #[must_use]
-    pub fn from_env() -> Self {
-        use super::from_env;
-
-        let env = envy::from_env::<FromEnv>().expect("FromEnv deserialization error");
-
-        let mut this = Self::new();
-
-        match env.auth {
-            from_env::AuthenticationMethod::Creds { jwt, nkey } => {
-                this = this.authentication_method(Some(AuthenticationMethod::Creds { jwt, nkey }));
-            }
-            from_env::AuthenticationMethod::CredsFile { creds_file } => {
-                let contents = std::fs::read_to_string(creds_file).expect("read credentials file");
-                let auth =
-                    AuthenticationMethod::from_creds(&contents).expect("parse credentials file");
-                this = this.authentication_method(Some(auth));
-            }
-            from_env::AuthenticationMethod::UserAndPassword { username, password } => {
-                this = this.authentication_method(Some(AuthenticationMethod::UserAndPassword {
-                    username,
-                    password,
-                }));
-            }
-            from_env::AuthenticationMethod::None {} => {
-                this = this.authentication_method(None);
-            }
-        }
-
-        if let Some(inbox_prefix) = env.inbox_prefix {
-            this = this.inbox_prefix(inbox_prefix);
-        }
-
-        this
     }
 
     /// Controls the Nagle algorithm for kernel-level bandwidth vs latency optimization

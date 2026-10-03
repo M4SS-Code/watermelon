@@ -53,9 +53,6 @@ mod quick_info;
 #[cfg(test)]
 pub(crate) mod tests;
 
-#[cfg(feature = "from-env")]
-pub(super) mod from_env;
-
 const CLIENT_OP_CHANNEL_SIZE: usize = 512;
 const SUBSCRIPTION_CHANNEL_SIZE: usize = 256;
 const MIN_RECONNECT_DELAY: Duration = Duration::from_secs(1);
