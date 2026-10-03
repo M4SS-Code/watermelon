@@ -4,6 +4,7 @@ use std::{
 };
 
 use bytes::Bytes;
+use clap::Parser;
 use futures_util::TryStreamExt as _;
 use jiff::Zoned;
 use tokio::{
@@ -19,13 +20,26 @@ use watermelon::{
     },
 };
 
+use self::config::NatsConfig;
+
+mod config;
+
 type BoxError = Box<dyn std::error::Error + Send + Sync + 'static>;
+
+#[derive(Debug, Parser)]
+#[command(about = "Watermelon example client")]
+struct Cli {
+    #[command(flatten)]
+    nats: NatsConfig,
+}
 
 #[tokio::main]
 async fn main() -> Result<(), BoxError> {
-    let client = Client::builder()
-        .client_name("watermelon-example")
-        .connect("nats://demo.nats.io".parse()?)
+    let cli = Cli::parse();
+
+    let client = cli
+        .nats
+        .connect(Client::builder().client_name("watermelon-example"))
         .await?;
     println!("Quick Info: {:?}", client.quick_info());
 
