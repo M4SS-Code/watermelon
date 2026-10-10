@@ -670,7 +670,13 @@ impl Handler {
                         }
                     }
                 }
-                Poll::Ready(0) => self.shutting_down = true,
+                Poll::Ready(0) => {
+                    // The channel is closed and drained. Polling it again would
+                    // keep returning `Ready(0)` until the coop budget runs out,
+                    // starving the writer.
+                    self.shutting_down = true;
+                    return ReceiveOutcome::NoMoreCommands;
+                }
             }
         }
 

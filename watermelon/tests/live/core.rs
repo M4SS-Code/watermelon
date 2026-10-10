@@ -717,3 +717,16 @@ async fn close_disconnects_and_rejects_commands() {
     );
     eventually(TIMEOUT, async || server.connections().await.is_empty()).await;
 }
+
+#[tokio::test]
+async fn close_returns_with_buffered_publishes() {
+    let Some(server) = server().await else {
+        return;
+    };
+    let client = connect(&server).await;
+
+    for _ in 0..100 {
+        publish(&client, "unheard", b"payload").await;
+    }
+    client.close().within(TIMEOUT).await;
+}
