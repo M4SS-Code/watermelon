@@ -730,3 +730,33 @@ async fn close_returns_with_buffered_publishes() {
     }
     client.close().within(TIMEOUT).await;
 }
+
+#[tokio::test]
+async fn close_delivers_buffered_publishes() {
+    let Some(server) = server().await else {
+        return;
+    };
+    let subscriber = connect(&server).await;
+    let publisher = connect(&server).await;
+
+    let mut subscription = subscribe(&subscriber, "buffered").await;
+    sync(&subscriber).await;
+
+    // Stay below the subscription buffer size so that nothing is dropped
+    // while the messages wait to be read
+    let count = 200;
+    for i in 0..count {
+        publisher
+            .publish(Subject::from_static("buffered"))
+            .payload(Bytes::from(i.to_string()))
+            .within(TIMEOUT)
+            .await
+            .expect("publish");
+    }
+    publisher.close().within(TIMEOUT).await;
+
+    for i in 0..count {
+        let message = next_message(&mut subscription).await;
+        assert_eq!(message.base.payload, i.to_string());
+    }
+}

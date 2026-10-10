@@ -136,7 +136,6 @@ impl Client {
         let handler = tokio::spawn(async move {
             let mut handle = handle;
 
-            #[expect(clippy::while_let_loop)]
             loop {
                 match (&mut handle).await {
                     HandlerOutput::ServerError
@@ -151,7 +150,10 @@ impl Client {
                             break;
                         }
                     }
-                    HandlerOutput::Closed => break,
+                    HandlerOutput::Closed => {
+                        handle.close().await;
+                        break;
+                    }
                 }
             }
         });
@@ -193,7 +195,6 @@ impl Client {
             let Some(mut handle) = connect(&addr, &builder, recycle, Duration::ZERO).await else {
                 return;
             };
-            #[expect(clippy::while_let_loop)]
             loop {
                 match (&mut handle).await {
                     HandlerOutput::ServerError
@@ -208,7 +209,10 @@ impl Client {
                             break;
                         }
                     }
-                    HandlerOutput::Closed => break,
+                    HandlerOutput::Closed => {
+                        handle.close().await;
+                        break;
+                    }
                 }
             }
         });

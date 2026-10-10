@@ -7,6 +7,7 @@ use std::{
     pin::{Pin, pin},
     sync::Arc,
     task::{Context, Poll},
+    time::Duration,
 };
 
 use arc_swap::ArcSwapOption;
@@ -44,6 +45,8 @@ mod pinger;
 
 pub(crate) const MULTIPLEXED_SUBSCRIPTION_ID: SubscriptionId = SubscriptionId::MIN;
 const RECV_BUF: usize = 16;
+/// How long [`Handler::close`] waits for the server to close the connection
+const CLOSE_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Debug)]
 pub(crate) struct Handler {
@@ -237,6 +240,22 @@ impl Handler {
             multiplexed_subscription_prefix: self.multiplexed_subscription_prefix,
             shutdown_recv: self.shutdown_recv,
         }
+    }
+
+    /// Gracefully close the connection after [`HandlerOutput::Closed`]
+    pub(crate) async fn close(mut self) {
+        self.quick_info.store_is_connected(false);
+        if self.conn.shutdown().await.is_err() {
+            return;
+        }
+
+        // Dropping the socket while the server's replies are still unread
+        // makes the kernel reset the connection, discarding the data the
+        // server has yet to read. Wait for the server to close its side.
+        let _ = timeout(CLOSE_TIMEOUT, async {
+            while self.conn.read_next().await.is_ok() {}
+        })
+        .await;
     }
 
     pub(crate) fn info(&self) -> &Arc<ArcSwapOption<ServerInfo>> {
