@@ -8,7 +8,7 @@ use std::{
 };
 
 use hyper::StatusCode;
-use rustix::process::{Pid, Signal, kill_process};
+use rustix::process::{Pid, Signal, WaitId, WaitIdOptions, kill_process, waitid};
 use serde_json::Value;
 use tempfile::TempDir;
 use tokio::{
@@ -269,8 +269,20 @@ impl NatsServer {
     }
 
     /// Freeze the server process, leaving its sockets open
+    ///
+    /// Returns once every thread of the server has stopped, so nothing
+    /// sent to it afterwards is answered until [`NatsServer::resume`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if waiting for the process to stop fails.
     pub fn pause(&self) {
         self.signal(Signal::STOP);
+        // `SIGSTOP` is delivered asynchronously: a thread running on another
+        // CPU keeps going until it next enters the kernel, and may still
+        // reply to a request in the meantime
+        waitid(WaitId::Pid(self.pid), WaitIdOptions::STOPPED)
+            .unwrap_or_else(|err| panic!("wait for nats-server to stop: {err}"));
     }
 
     /// Resume a server frozen by [`NatsServer::pause`]
