@@ -6,7 +6,7 @@ use std::{
 use bytes::Bytes;
 use clap::Parser;
 use futures_util::TryStreamExt as _;
-use jiff::Zoned;
+use jiff::ZonedDateTime;
 use tokio::{
     signal::ctrl_c,
     task::JoinSet,
@@ -123,7 +123,7 @@ async fn main() -> Result<(), BoxError> {
 
 /// Get the local time and timezone
 fn local_time() -> HeaderValue {
-    Zoned::now()
+    ZonedDateTime::now()
         .to_string()
         .try_into()
         .expect("local DateTime can always be encoded into `HeaderValue`")
